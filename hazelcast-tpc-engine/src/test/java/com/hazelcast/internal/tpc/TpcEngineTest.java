@@ -20,7 +20,6 @@ package com.hazelcast.internal.tpc;
 import org.junit.After;
 import org.junit.Test;
 
-
 import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.internal.tpc.TpcEngine.State.SHUTDOWN;

@@ -34,6 +34,8 @@ import java.io.EOFException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.CancelledKeyException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -97,6 +99,8 @@ public class TcpServerConnection implements ServerConnection {
     private volatile String closeReason;
     private volatile int planeIndex = -1;
 
+    private volatile List<Integer> tpcPorts = new ArrayList<>();
+
     public TcpServerConnection(TcpServerConnectionManager connectionManager,
                                ConnectionLifecycleListener<TcpServerConnection> lifecycleListener,
                                int connectionId,
@@ -112,6 +116,14 @@ public class TcpServerConnection implements ServerConnection {
         this.acceptorSide = acceptorSide;
         this.attributeMap = channel.attributeMap();
         attributeMap.put(ServerConnection.class, this);
+    }
+
+    public List<Integer> getRemoteTpcPorts() {
+        return tpcPorts;
+    }
+
+    public void setRemoteTpcPorts(List<Integer> tpcPorts) {
+        this.tpcPorts = tpcPorts == null?new ArrayList<>():tpcPorts;
     }
 
     @Override

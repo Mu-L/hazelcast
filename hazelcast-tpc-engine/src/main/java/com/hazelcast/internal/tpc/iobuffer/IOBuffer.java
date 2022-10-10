@@ -58,7 +58,7 @@ public class IOBuffer {
     public IOBuffer next;
     public AsyncSocket socket;
 
-    public boolean trackRelease;
+    public boolean trackRelease = false;
     private ByteBuffer buff;
     public IOBufferAllocator allocator;
     public boolean concurrent;
@@ -224,27 +224,36 @@ public class IOBuffer {
 
     // very inefficient
     public void writeString(String s) {
-        int length = s.length();
+        if (s == null) {
+            buff.putInt(-1);
+        } else {
+            int length = s.length();
 
-        ensureRemaining(SIZEOF_INT + length * SIZEOF_CHAR);
+            ensureRemaining(SIZEOF_INT + length * SIZEOF_CHAR);
 
-        buff.putInt(length);
-        for (int k = 0; k < length; k++) {
-            buff.putChar(s.charAt(k));
+            buff.putInt(length);
+            for (int k = 0; k < length; k++) {
+                buff.putChar(s.charAt(k));
+            }
         }
     }
 
     // very inefficient
     public void readString(StringBuffer sb) {
         int size = buff.getInt();
+
         for (int k = 0; k < size; k++) {
             sb.append(buff.getChar());
         }
     }
 
+    // very inefficient
     public String readString() {
         StringBuffer sb = new StringBuffer();
         int size = buff.getInt();
+        if (size == -1) {
+            return null;
+        }
         for (int k = 0; k < size; k++) {
             sb.append(buff.getChar());
         }
@@ -252,6 +261,9 @@ public class IOBuffer {
     }
 
     public void acquire() {
+        if (trackRelease) {
+            new Exception("acquire").printStackTrace();
+        }
         if (allocator == null) {
             return;
         }
@@ -277,6 +289,10 @@ public class IOBuffer {
     }
 
     public void release() {
+        if (trackRelease) {
+            new Exception("release").printStackTrace();
+        }
+
         if (allocator == null) {
             return;
         }
@@ -306,5 +322,13 @@ public class IOBuffer {
                 throw new IllegalStateException("Too many releases. Ref counter must be larger than 0, current:" + current);
             }
         }
+    }
+
+    public int capacity() {
+        return buff.capacity();
+    }
+
+    public byte read() {
+        return buff.get();
     }
 }

@@ -18,6 +18,7 @@ package com.hazelcast.internal.tpc;
 
 
 import com.hazelcast.internal.tpc.iobuffer.IOBuffer;
+import com.hazelcast.internal.tpc.iobuffer.IOBufferAllocator;
 import com.hazelcast.internal.tpc.logging.TpcLogger;
 import com.hazelcast.internal.tpc.logging.TpcLoggerLocator;
 import com.hazelcast.internal.tpc.util.BoundPriorityQueue;
@@ -29,6 +30,8 @@ import com.hazelcast.internal.util.ThreadAffinityHelper;
 import org.jctools.queues.MpmcArrayQueue;
 
 import java.util.BitSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -38,6 +41,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import static com.hazelcast.internal.tpc.Eventloop.State.NEW;
 import static com.hazelcast.internal.tpc.Eventloop.State.RUNNING;
@@ -142,7 +146,7 @@ public abstract class Eventloop implements Executor {
      *
      * @return the Unsafe instance.
      */
-    public final Unsafe unsafe() {
+    public Unsafe unsafe() {
         return unsafe;
     }
 
@@ -544,6 +548,30 @@ public abstract class Eventloop implements Executor {
             return Eventloop.this;
         }
 
+        /**
+         * Creates a new {@link AsyncFile} with the given path.
+         *
+         * @param path the path to the AsyncFile.
+         * @return the created AsyncFile.
+         */
+        public abstract AsyncFile newAsyncFile(String path);
+
+        /**
+         * Returns the IOBufferAllocator needed to interact with the {@link AsyncFile}.
+         * <p/>
+         * These buffers could have special requirements. E.g. when Direct I/O is used, the
+         * buffers need to be 4KB aligned and direct.
+         *
+         * @return t
+         */
+        public abstract IOBufferAllocator fileIOBufferAllocator();
+
+        public <E> Fut<E> newCompletedFuture(E value) {
+            Fut<E> fut = futAllocator.allocate();
+            fut.complete(value);
+            return fut;
+        }
+
         public <E> Fut<E> newFut() {
             return futAllocator.allocate();
         }
@@ -653,6 +681,57 @@ public abstract class Eventloop implements Executor {
             }
             scheduledTask.deadlineNanos = deadlineNanos;
             scheduledTaskQueue.add(scheduledTask);
+            return fut;
+        }
+
+        public <I, O> Fut<List<O>> map(List<I> input, List<O> output, Function<I, O> function) {
+            Fut fut = newFut();
+
+            //todo: task can be pooled
+            Runnable task = new Runnable() {
+                Iterator<I> it = input.iterator();
+
+                @Override
+                public void run() {
+                    if (it.hasNext()) {
+                        I item = it.next();
+                        O result = function.apply(item);
+                        output.add(result);
+                    }
+
+                    if (it.hasNext()) {
+                        unsafe.offer(this);
+                    } else {
+                        fut.complete(output);
+                    }
+                }
+            };
+
+            execute(task);
+            return fut;
+        }
+
+        /**
+         * Keeps calling the loop function until it returns false.
+         *
+         * @param loopFunction the function that is called in a loop.
+         * @return the future that is completed as soon as the loop finishes.
+         */
+        public Fut loop(Function<Eventloop, Boolean> loopFunction) {
+            Fut fut = newFut();
+
+            //todo: task can be pooled
+            Runnable task = new Runnable() {
+                @Override
+                public void run() {
+                    if (loopFunction.apply(Eventloop.this)) {
+                        unsafe.offer(this);
+                    } else {
+                        fut.complete(null);
+                    }
+                }
+            };
+            execute(task);
             return fut;
         }
     }
