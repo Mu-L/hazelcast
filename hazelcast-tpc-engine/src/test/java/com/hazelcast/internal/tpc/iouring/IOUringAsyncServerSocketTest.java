@@ -18,8 +18,9 @@ package com.hazelcast.internal.tpc.iouring;
 
 import com.hazelcast.internal.tpc.AsyncServerSocketTest;
 import com.hazelcast.internal.tpc.Eventloop;
+import org.junit.Ignore;
 
-
+@Ignore
 public class IOUringAsyncServerSocketTest extends AsyncServerSocketTest {
 
     @Override

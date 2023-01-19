@@ -19,10 +19,7 @@ package com.hazelcast.internal.tpc.iouring;
 import com.hazelcast.internal.tpc.Eventloop;
 import com.hazelcast.internal.tpc.EventloopTest;
 import com.hazelcast.internal.tpc.EventloopType;
-import org.junit.Ignore;
 
-
-@Ignore
 public class IOUringEventloopTest extends EventloopTest {
 
     @Override
