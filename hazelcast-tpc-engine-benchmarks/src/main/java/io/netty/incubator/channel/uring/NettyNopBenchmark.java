@@ -20,6 +20,7 @@ public class NettyNopBenchmark {
         latch.await();
         long duration = System.currentTimeMillis() - startTimeMs;
         System.out.println((operations * 1000 / duration) + " IOPS");
+        System.exit(0);
     }
 
     private static class WorkerThread extends Thread {
