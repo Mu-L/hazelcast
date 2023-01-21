@@ -83,7 +83,7 @@ public final class IOUringAsyncServerSocket extends AsyncServerSocket {
             // todo: on close we need to deregister
             sq = eventloop.sq;
             IOUringEventloop.IOUringUnsafe unsafe = eventloop.unsafe();
-            this.userdata_acceptHandler = unsafe.nextUserdata();
+            this.userdata_acceptHandler = unsafe.nextPermanentHandlerId();
             unsafe.handlers.put(userdata_acceptHandler, new Handler_OP_ACCEPT());
         });
     }

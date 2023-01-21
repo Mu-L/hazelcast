@@ -36,7 +36,7 @@ import static com.hazelcast.internal.tpc.util.OS.pageSize;
 public class AsyncFileNopBenchmark {
     private static String path = System.getProperty("user.home");
 
-    public static long operations = 100 * 1000 * 1000;
+    public static long operations = 100l * 1000 * 1000;
     public static final int concurrency = 100;
     public static final int openFlags = AsyncFile.O_CREAT | AsyncFile.O_DIRECT | AsyncFile.O_WRONLY;
 
@@ -77,7 +77,7 @@ public class AsyncFileNopBenchmark {
 
         latch.await();
         long duration = System.currentTimeMillis() - startMs;
-        System.out.println((operations * 1000f / duration) + " IOPS");
+        System.out.println((operations * 1000 / duration) + " IOPS");
         System.exit(0);
     }
 

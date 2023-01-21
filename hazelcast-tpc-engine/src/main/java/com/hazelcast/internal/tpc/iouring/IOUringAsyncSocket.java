@@ -253,15 +253,15 @@ public final class IOUringAsyncSocket extends AsyncSocket {
             IOUringEventloop.IOUringUnsafe unsafe = this.eventloop.unsafe();
 
             handler_OP_READ = new Handler_OP_READ();
-            userdata_OP_READ = unsafe.nextUserdata();
+            userdata_OP_READ = unsafe.nextPermanentHandlerId();
             unsafe.handlers.put(userdata_OP_READ, handler_OP_READ);
 
             handler_OP_WRITE = new Handler_OP_WRITE();
-            userdata_OP_WRITE = unsafe.nextUserdata();
+            userdata_OP_WRITE = unsafe.nextPermanentHandlerId();
             unsafe.handlers.put(userdata_OP_WRITE, handler_OP_WRITE);
 
             handler_op_WRITEV = new Handler_OP_WRITEV();
-            userdata_OP_WRITEV = unsafe.nextUserdata();
+            userdata_OP_WRITEV = unsafe.nextPermanentHandlerId();
             unsafe.handlers.put(userdata_OP_WRITEV, handler_op_WRITEV);
 
             // todo: deal with return value

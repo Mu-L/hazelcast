@@ -127,7 +127,7 @@ public class IOUringEventloop extends Eventloop {
      * @param closeable the AutoCloseable to deregister.
      */
     public void deregisterCloseable(AutoCloseable closeable) {
-         closeables.remove(checkNotNull(closeable, "closeable"));
+        closeables.remove(checkNotNull(closeable, "closeable"));
     }
 
     @Override
@@ -155,8 +155,8 @@ public class IOUringEventloop extends Eventloop {
         eventLoopHandler = new EventloopHandler();
         storageScheduler.init(this);
         IOUringUnsafe unsafe = unsafe();
-        this.userdata_eventRead = unsafe.nextUserdata();
-        this.userdata_timeout = unsafe.nextUserdata();
+        this.userdata_eventRead = unsafe.nextPermanentHandlerId();
+        this.userdata_timeout = unsafe.nextPermanentHandlerId();
         unsafe.handlers.put(userdata_eventRead, new EventFdCompletionHandler());
         unsafe.handlers.put(userdata_timeout, new TimeoutCompletionHandler());
     }
@@ -281,7 +281,9 @@ public class IOUringEventloop extends Eventloop {
 
         @Override
         public void handle(int res, int flags, long userdata) {
-            IOCompletionHandler h = handlers.get(userdata);
+            IOCompletionHandler h = userdata >= 0
+                    ? handlers.get(userdata)
+                    : handlers.remove(userdata);
 
             if (h == null) {
                 logger.warning("no handler found for: " + userdata);
@@ -290,7 +292,6 @@ public class IOUringEventloop extends Eventloop {
             }
         }
     }
-
 
     private class EventFdCompletionHandler implements IOCompletionHandler {
         @Override
@@ -307,15 +308,33 @@ public class IOUringEventloop extends Eventloop {
 
     public class IOUringUnsafe extends Unsafe {
 
-        private long userdataGenerator = 0;
+        private long permanentHandlerIdGenerator = 0;
+        private long temporaryHandlerIdGenerator = -1;
+
         final LongObjectHashMap<IOCompletionHandler> handlers = new LongObjectHashMap<>(4096);
 
         // this is not a very efficient allocator. It would be better to allocate a large chunk of
         // memory and then carve out smaller blocks. But for now it will do.
         private IOBufferAllocator storeIOBufferAllocator = new NonConcurrentIOBufferAllocator(4096, true, pageSize());
 
-        public long nextUserdata() {
-            return userdataGenerator++;
+        /**
+         * Gets the next handler id for a permanent handler. A permanent handler stays registered after receiving
+         * a completion event.
+         *
+         * @return the next handler id.
+         */
+        public long nextPermanentHandlerId() {
+            return permanentHandlerIdGenerator++;
+        }
+
+        /**
+         * Gets the next handler id for a temporary handler. A temporary handler is automatically removed after receiving
+         * the completion event.
+         *
+         * @return the next handler id.
+         */
+        public long nextTemporaryHandlerId() {
+            return temporaryHandlerIdGenerator--;
         }
 
         @Override

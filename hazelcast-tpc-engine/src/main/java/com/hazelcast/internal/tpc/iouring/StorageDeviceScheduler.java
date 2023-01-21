@@ -90,7 +90,7 @@ public class StorageDeviceScheduler {
     private void offerOp(Op op) {
         //System.out.println("Offer operation");
 
-        long userdata = unsafe.nextUserdata();
+        long userdata = unsafe.nextTemporaryHandlerId();
         //System.out.println("userdata:"+userdata);
         handlers.put(userdata, op);
 

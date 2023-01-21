@@ -88,7 +88,7 @@ public class NioRpcBenchmark {
         NioEventloop clientEventLoop = new NioEventloop(eventloopBuilder);
         clientEventLoop.start();
 
-        NioAsyncSocket clientSocket = NioAsyncSocket.open();
+        NioAsyncSocket clientSocket = NioAsyncSocket.openTcpSocket();
         clientSocket.setTcpNoDelay(true);
         clientSocket.setReadHandler(new ReadHandler() {
             private final IOBufferAllocator responseAllocator = new NonConcurrentIOBufferAllocator(8, true);
@@ -128,9 +128,8 @@ public class NioRpcBenchmark {
         NioEventloop serverEventloop = new NioEventloop(builder);
         serverEventloop.start();
 
-        AsyncServerSocket serverSocket = serverEventloop.openAsyncServerSocket();
+        AsyncServerSocket serverSocket = serverEventloop.openTcpAsyncServerSocket();
         serverSocket.bind(serverAddress);
-        serverSocket.listen(10);
         serverSocket.accept(socket -> {
             socket.setTcpNoDelay(true);
             socket.setReadHandler(new ReadHandler() {
