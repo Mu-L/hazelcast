@@ -17,7 +17,6 @@
 package com.hazelcast.internal.tpc;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.function.BiConsumer;
 
 import static com.hazelcast.internal.tpc.util.Preconditions.checkNotNull;
@@ -44,7 +43,7 @@ public class Fut<E> {
 
     private Object value = EMPTY;
     private final Eventloop eventloop;
-    private final List<BiConsumer<E, Throwable>> consumers = new ArrayList<>();
+    private final ArrayList<BiConsumer<E, Throwable>> consumers = new ArrayList<>();
     private boolean exceptional;
     private boolean releaseOnComplete;
 
@@ -95,7 +94,8 @@ public class Fut<E> {
         this.exceptional = true;
 
         int count = consumers.size();
-        for (BiConsumer<E, Throwable> consumer : consumers) {
+        for (int k = 0; k < count; k++) {
+            BiConsumer<E, Throwable> consumer = consumers.get(k);
             try {
                 consumer.accept(null, value);
             } catch (Exception e) {
@@ -122,7 +122,8 @@ public class Fut<E> {
         this.exceptional = false;
 
         int count = consumers.size();
-        for (BiConsumer<E, Throwable> consumer : consumers) {
+        for (int k = 0; k < count; k++) {
+            BiConsumer<E, Throwable> consumer = consumers.get(k);
             try {
                 consumer.accept(value, null);
             } catch (Exception e) {

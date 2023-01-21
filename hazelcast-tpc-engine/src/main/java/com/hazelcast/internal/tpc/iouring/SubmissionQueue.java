@@ -184,15 +184,17 @@ public final class SubmissionQueue {
         return IOUring.enter(ringFd, toSubmit, minComplete, flags);
     }
 
+    /**
+     * Submits pending items and then waits for at least 1 completed event.
+     *
+     * @return the number of submitted items.
+     */
     public int submitAndWait() {
         int tail = acquireTail();
         int toSubmit = localTail - tail;
         releaseTail(localTail);
 
-        //System.out.println("Sq::submitAndWait toSubmit "+toSubmit +" localTail:"+localTail+" tail:"+tail);
-
         int res = IOUring.enter(ringFd, toSubmit, 1, IORING_ENTER_GETEVENTS);
-        //System.out.println("Sq::submitAndWait res "+res);
         if (res >= 0) {
             return toSubmit;
         } else {

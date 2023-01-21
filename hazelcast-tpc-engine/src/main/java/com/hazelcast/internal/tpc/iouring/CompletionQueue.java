@@ -46,6 +46,11 @@ public final class CompletionQueue {
         this.uring = uring;
     }
 
+    /**
+     * Checks if there are any completion events.
+     *
+     * @return true if there are any completion events, false otherwise.
+     */
     public boolean hasCompletions() {
         if (localHead != localTail) {
             return true;

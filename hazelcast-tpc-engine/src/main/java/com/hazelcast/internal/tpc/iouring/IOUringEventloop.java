@@ -281,6 +281,10 @@ public class IOUringEventloop extends Eventloop {
 
         @Override
         public void handle(int res, int flags, long userdata) {
+            // Temporary handlers have a userdata smaller than 0 and need to be removed
+            // on completion.
+            // Permanent handlers have a userdata equal or larger than 0 and should not
+            // be removed on completion.
             IOCompletionHandler h = userdata >= 0
                     ? handlers.get(userdata)
                     : handlers.remove(userdata);
