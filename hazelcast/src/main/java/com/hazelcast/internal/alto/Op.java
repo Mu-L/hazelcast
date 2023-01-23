@@ -17,6 +17,7 @@
 package com.hazelcast.internal.alto;
 
 import com.hazelcast.internal.tpc.Eventloop;
+import com.hazelcast.internal.tpc.Unsafe;
 import com.hazelcast.internal.tpc.iobuffer.IOBuffer;
 
 import java.io.EOFException;
@@ -36,7 +37,7 @@ public abstract class Op {
     public IOBuffer response;
     public OpAllocator allocator;
     public OpScheduler scheduler;
-    public Eventloop.Unsafe unsafe;
+    public Unsafe unsafe;
     public Eventloop eventloop;
 
     public Op(int opcode) {

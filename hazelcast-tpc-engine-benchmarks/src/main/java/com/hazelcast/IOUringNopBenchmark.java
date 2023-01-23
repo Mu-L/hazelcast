@@ -3,6 +3,7 @@ package com.hazelcast;
 import com.hazelcast.internal.tpc.iouring.CompletionQueue;
 import com.hazelcast.internal.tpc.iouring.IOCompletionHandler;
 import com.hazelcast.internal.tpc.iouring.IOUring;
+import com.hazelcast.internal.tpc.iouring.IOUringAsyncSocket;
 import com.hazelcast.internal.tpc.iouring.Linux;
 import com.hazelcast.internal.tpc.iouring.SubmissionQueue;
 
@@ -11,9 +12,9 @@ import java.io.UncheckedIOException;
 import java.util.concurrent.CountDownLatch;
 
 public class IOUringNopBenchmark {
-    public static boolean spin = true;
-    public static int concurrency = 1;
-    public static long operations = 100 * 1000 * 1000;
+    public static final boolean spin = true;
+    public static final int concurrency = 64;
+    public static final long operations = 1000 * 1000 * 1000;
 
     public static void main(String[] args) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
@@ -37,11 +38,11 @@ public class IOUringNopBenchmark {
         @Override
         public void run() {
             try {
-                IOUring uring = new IOUring(4096, 0);
-                SubmissionQueue sq = uring.getSubmissionQueue();
-                CompletionQueue cq = uring.getCompletionQueue();
-
-                CompletionHandler handler = new CompletionHandler(sq, latch);
+                final IOUring uring = new IOUring(4096, 0);
+                final SubmissionQueue sq = uring.getSubmissionQueue();
+                final CompletionQueue cq = uring.getCompletionQueue();
+                final CompletionHandler handler = new CompletionHandler(sq, latch);
+                final boolean spin = IOUringNopBenchmark.spin;
 
                 for (int k = 0; k < concurrency; k++) {
                     sq.offer(IOUring.IORING_OP_NOP, 0, 0, 0, 0, 0, 0, 0);

@@ -31,7 +31,7 @@ public class StorageDeviceScheduler {
     private int concurrent;
     private final CircularQueue<Op> pending;
     private final SlabAllocator<Op> opAllocator;
-    private final IOUringEventloop.IOUringUnsafe unsafe;
+    private final IOUringUnsafe unsafe;
 
     public StorageDeviceScheduler(String path,
                                   int maxConcurrent,

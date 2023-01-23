@@ -18,8 +18,8 @@ package com.hazelcast.internal.tpc.iouring;
 
 
 import com.hazelcast.internal.tpc.AsyncFile;
-import com.hazelcast.internal.tpc.Eventloop;
 import com.hazelcast.internal.tpc.Fut;
+import com.hazelcast.internal.tpc.Unsafe;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -45,7 +45,7 @@ public final class IOUringAsyncFile extends AsyncFile {
 
     private final IOUringEventloop eventloop;
     private final StorageDeviceRegistry storageScheduler;
-    private final Eventloop.Unsafe unsafe;
+    private final IOUringUnsafe unsafe;
     private final String path;
 
     StorageDeviceScheduler dev;
@@ -117,7 +117,7 @@ public final class IOUringAsyncFile extends AsyncFile {
     // todo: this should be taken care of by io_uring and not DirectIoLib because it is blocking.
     @Override
     public Fut<Integer> open(int flags, int permissions) {
-        Fut<Integer> f = eventloop.unsafe().newFut();
+        Fut<Integer> f = unsafe.newFut();
 
         // C strings end with \0
         byte[] chars = path.getBytes(StandardCharsets.UTF_8);

@@ -16,18 +16,19 @@
 
 package com.hazelcast.internal.tpc.iouring;
 
-import com.hazelcast.internal.tpc.AsyncFile;
 import com.hazelcast.internal.tpc.AsyncServerSocket;
 import com.hazelcast.internal.tpc.AsyncSocket;
 import com.hazelcast.internal.tpc.Eventloop;
-import com.hazelcast.internal.tpc.iobuffer.IOBufferAllocator;
-import com.hazelcast.internal.tpc.iobuffer.NonConcurrentIOBufferAllocator;
+import com.hazelcast.internal.tpc.Scheduler;
+import com.hazelcast.internal.tpc.Unsafe;
 import com.hazelcast.internal.tpc.util.LongObjectHashMap;
 import com.hazelcast.internal.tpc.util.NanoClock;
 import com.hazelcast.internal.tpc.util.UnsafeLocator;
+import org.jctools.queues.MpmcArrayQueue;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.hazelcast.internal.tpc.Eventloop.State.RUNNING;
 import static com.hazelcast.internal.tpc.iouring.IOUring.IORING_OP_READ;
@@ -36,7 +37,6 @@ import static com.hazelcast.internal.tpc.iouring.IOUring.IORING_SETUP_IOPOLL;
 import static com.hazelcast.internal.tpc.util.BitUtil.SIZEOF_LONG;
 import static com.hazelcast.internal.tpc.util.CloseUtil.closeAllQuietly;
 import static com.hazelcast.internal.tpc.util.CloseUtil.closeQuietly;
-import static com.hazelcast.internal.tpc.util.OS.pageSize;
 import static com.hazelcast.internal.tpc.util.Preconditions.checkNotNull;
 
 /**
@@ -142,7 +142,7 @@ public class IOUringEventloop extends Eventloop {
 
     @Override
     protected Unsafe createUnsafe() {
-        return new IOUringUnsafe();
+        return new IOUringUnsafe(this);
     }
 
     @Override
@@ -193,7 +193,15 @@ public class IOUringEventloop extends Eventloop {
         if ((config.flags & IORING_SETUP_IOPOLL) != 0) {
             throw new UnsupportedOperationException();
         } else {
-            NanoClock nanoClock = unsafe.nanoClock();
+            final NanoClock nanoClock = unsafe.nanoClock();
+            final EventloopHandler eventLoopHandler = this.eventLoopHandler;
+            final AtomicBoolean wakeupNeeded = this.wakeupNeeded;
+            final CompletionQueue cq = this.cq;
+            final boolean spin = this.spin;
+            final SubmissionQueue sq = this.sq;
+            final MpmcArrayQueue concurrentTaskQueue = this.concurrentTaskQueue;
+            final Scheduler scheduler = this.scheduler;
+
             sq_offerEventFdRead();
 
             boolean moreWork = false;
@@ -201,26 +209,28 @@ public class IOUringEventloop extends Eventloop {
                 if (cq.hasCompletions()) {
                     // todo: do we want to control number of events being processed.
                     cq.process(eventLoopHandler);
-                } else if (spin || moreWork) {
-                    sq.submit();
                 } else {
-                    wakeupNeeded.set(true);
-                    if (concurrentTaskQueue.isEmpty()) {
-                        if (earliestDeadlineNanos != -1) {
-                            long timeoutNanos = earliestDeadlineNanos - nanoClock.nanoTime();
-                            if (timeoutNanos > 0) {
-                                sq_offerTimeout(timeoutNanos);
-                                sq.submitAndWait();
+                    if (spin || moreWork) {
+                        sq.submit();
+                    } else {
+                        wakeupNeeded.set(true);
+                         if (concurrentTaskQueue.isEmpty()) {
+                            if (earliestDeadlineNanos != -1) {
+                                long timeoutNanos = earliestDeadlineNanos - nanoClock.nanoTime();
+                                if (timeoutNanos > 0) {
+                                    sq_offerTimeout(timeoutNanos);
+                                    sq.submitAndWait();
+                                } else {
+                                    sq.submit();
+                                }
                             } else {
-                                sq.submit();
+                                sq.submitAndWait();
                             }
                         } else {
-                            sq.submitAndWait();
+                            sq.submit();
                         }
-                    } else {
-                        sq.submit();
+                        wakeupNeeded.set(false);
                     }
-                    wakeupNeeded.set(false);
                 }
 
                 // what are the queues that are available for processing
@@ -307,48 +317,6 @@ public class IOUringEventloop extends Eventloop {
     private class TimeoutCompletionHandler implements IOCompletionHandler {
         @Override
         public void handle(int res, int flags, long userdata) {
-        }
-    }
-
-    public class IOUringUnsafe extends Unsafe {
-
-        private long permanentHandlerIdGenerator = 0;
-        private long temporaryHandlerIdGenerator = -1;
-
-        final LongObjectHashMap<IOCompletionHandler> handlers = new LongObjectHashMap<>(4096);
-
-        // this is not a very efficient allocator. It would be better to allocate a large chunk of
-        // memory and then carve out smaller blocks. But for now it will do.
-        private IOBufferAllocator storeIOBufferAllocator = new NonConcurrentIOBufferAllocator(4096, true, pageSize());
-
-        /**
-         * Gets the next handler id for a permanent handler. A permanent handler stays registered after receiving
-         * a completion event.
-         *
-         * @return the next handler id.
-         */
-        public long nextPermanentHandlerId() {
-            return permanentHandlerIdGenerator++;
-        }
-
-        /**
-         * Gets the next handler id for a temporary handler. A temporary handler is automatically removed after receiving
-         * the completion event.
-         *
-         * @return the next handler id.
-         */
-        public long nextTemporaryHandlerId() {
-            return temporaryHandlerIdGenerator--;
-        }
-
-        @Override
-        public IOBufferAllocator fileIOBufferAllocator() {
-            return storeIOBufferAllocator;
-        }
-
-        @Override
-        public AsyncFile newAsyncFile(String path) {
-            return new IOUringAsyncFile(path, IOUringEventloop.this);
         }
     }
 

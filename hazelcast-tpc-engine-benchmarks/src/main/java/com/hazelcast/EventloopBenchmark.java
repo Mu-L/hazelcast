@@ -3,7 +3,9 @@ package com.hazelcast;
 
 import com.hazelcast.internal.tpc.Eventloop;
 import com.hazelcast.internal.tpc.EventloopBuilder;
+import com.hazelcast.internal.tpc.Unsafe;
 import com.hazelcast.internal.tpc.iouring.IOUringEventloopBuilder;
+import com.hazelcast.internal.tpc.nio.NioEventloopBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -33,7 +35,7 @@ public class EventloopBenchmark {
 
     @Setup
     public void setup() {
-        EventloopBuilder eventloopBuilder = new IOUringEventloopBuilder();
+        EventloopBuilder eventloopBuilder = new NioEventloopBuilder();
         //Eventloop.Configuration eventloopBuilder = new NioEventloop.NioConfiguration();
         eventloopBuilder.setBatchSize(16);
         eventloopBuilder.setClockRefreshPeriod(16);
@@ -72,7 +74,7 @@ public class EventloopBenchmark {
         private final CountDownLatch latch;
         private final Eventloop eventloop;
         private final boolean useUnsafe;
-        private Eventloop.Unsafe unsafe;
+        private Unsafe unsafe;
         private long iteration = 0;
         private final long operations;
 

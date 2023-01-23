@@ -16,11 +16,10 @@
 
 package com.hazelcast.internal.tpc.nio;
 
-import com.hazelcast.internal.tpc.AsyncFile;
 import com.hazelcast.internal.tpc.AsyncServerSocket;
 import com.hazelcast.internal.tpc.AsyncSocket;
 import com.hazelcast.internal.tpc.Eventloop;
-import com.hazelcast.internal.tpc.iobuffer.IOBufferAllocator;
+import com.hazelcast.internal.tpc.Unsafe;
 import com.hazelcast.internal.tpc.util.NanoClock;
 
 import java.io.IOException;
@@ -58,7 +57,7 @@ public final class NioEventloop extends Eventloop {
 
     @Override
     protected Unsafe createUnsafe() {
-        return new NioUnsafe();
+        return new NioUnsafe(this);
     }
 
     @Override
@@ -140,16 +139,4 @@ public final class NioEventloop extends Eventloop {
         closeQuietly(selector);
     }
 
-    private class NioUnsafe extends Unsafe {
-
-        @Override
-        public IOBufferAllocator fileIOBufferAllocator() {
-            throw new RuntimeException("Not implemented");
-        }
-
-        @Override
-        public AsyncFile newAsyncFile(String path) {
-            throw new RuntimeException("Not implemented");
-        }
-    }
 }

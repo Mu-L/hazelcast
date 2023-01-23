@@ -18,20 +18,15 @@ package com.hazelcast.internal.tpc;
 
 
 import com.hazelcast.internal.tpc.iobuffer.IOBuffer;
-import com.hazelcast.internal.tpc.iobuffer.IOBufferAllocator;
 import com.hazelcast.internal.tpc.logging.TpcLogger;
 import com.hazelcast.internal.tpc.logging.TpcLoggerLocator;
 import com.hazelcast.internal.tpc.util.BoundPriorityQueue;
-import com.hazelcast.internal.tpc.util.CachedNanoClock;
-import com.hazelcast.internal.tpc.util.CircularQueue;
-import com.hazelcast.internal.tpc.util.NanoClock;
-import com.hazelcast.internal.tpc.util.StandardNanoClock;
 import com.hazelcast.internal.util.ThreadAffinityHelper;
+import jdk.internal.vm.annotation.ForceInline;
 import org.jctools.queues.MpmcArrayQueue;
 
+import java.util.ArrayDeque;
 import java.util.BitSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,7 +36,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Function;
 
 import static com.hazelcast.internal.tpc.Eventloop.State.NEW;
 import static com.hazelcast.internal.tpc.Eventloop.State.RUNNING;
@@ -77,7 +71,7 @@ public abstract class Eventloop implements Executor {
      */
     public final ConcurrentMap<?, ?> context = new ConcurrentHashMap<>();
 
-    public final CircularQueue<Runnable> localTaskQueue;
+    public final ArrayDeque<Runnable> localTaskQueue;
 
     protected final PriorityQueue<ScheduledTask> scheduledTaskQueue;
 
@@ -88,7 +82,7 @@ public abstract class Eventloop implements Executor {
 
     protected final Scheduler scheduler;
     protected final boolean spin;
-    private final int clockRefreshInterval;
+    final int clockRefreshInterval;
 
     protected Unsafe unsafe;
     protected final Thread eventloopThread;
@@ -97,7 +91,7 @@ public abstract class Eventloop implements Executor {
 
     TpcEngine engine;
 
-    private final FutAllocator futAllocator;
+    final FutAllocator futAllocator;
     private final EventloopType type;
     private final BitSet allowedCpus;
     private final CountDownLatch terminationLatch = new CountDownLatch(1);
@@ -116,7 +110,7 @@ public abstract class Eventloop implements Executor {
         this.batchSize = eventloopBuilder.batchSize;
         this.scheduler = eventloopBuilder.schedulerSupplier.get();
         scheduler.init(this);
-        this.localTaskQueue = new CircularQueue<>(eventloopBuilder.localTaskQueueCapacity);
+        this.localTaskQueue = new ArrayDeque<>(eventloopBuilder.localTaskQueueCapacity);
         this.concurrentTaskQueue = new MpmcArrayQueue(eventloopBuilder.concurrentTaskQueueCapacity);
         this.scheduledTaskQueue = new BoundPriorityQueue<>(eventloopBuilder.scheduledTaskQueueCapacity);
         this.eventloopThread = eventloopBuilder.threadFactory.newThread(new EventloopTask());
@@ -327,6 +321,8 @@ public abstract class Eventloop implements Executor {
      */
     public final boolean offer(Runnable task) {
         if (Thread.currentThread() == eventloopThread) {
+            // this optimization should not be needed. If you are on the eventloop,
+            // just make use of unsafe.localTaskQueue
             return localTaskQueue.offer(task);
         } else if (concurrentTaskQueue.offer(task)) {
             wakeup();
@@ -354,6 +350,7 @@ public abstract class Eventloop implements Executor {
         }
     }
 
+    @ForceInline
     protected final boolean runScheduledTasks() {
         for (int k = 0; k < batchSize; k++) {
             ScheduledTask scheduledTask = scheduledTaskQueue.peek();
@@ -380,9 +377,13 @@ public abstract class Eventloop implements Executor {
         return !scheduledTaskQueue.isEmpty();
     }
 
+    //@ForceInline
     protected final boolean runLocalTasks() {
+        final ArrayDeque<Runnable> localTaskQueue = this.localTaskQueue;
+        final int batchSize = this.batchSize;
+        //for(;;){
         for (int k = 0; k < batchSize; k++) {
-            Runnable task = localTaskQueue.poll();
+            final Runnable task = localTaskQueue.poll();
             if (task == null) {
                 // there are no more tasks.
                 return false;
@@ -396,10 +397,14 @@ public abstract class Eventloop implements Executor {
             }
         }
 
+       // return true;
         return !localTaskQueue.isEmpty();
     }
 
-    protected boolean runConcurrentTasks() {
+    //@ForceInline
+    protected final boolean runConcurrentTasks() {
+        final int batchSize = this.batchSize;
+        final MpmcArrayQueue concurrentTaskQueue = this.concurrentTaskQueue;
         for (int k = 0; k < batchSize; k++) {
             Object task = concurrentTaskQueue.poll();
             if (task == null) {
@@ -420,51 +425,6 @@ public abstract class Eventloop implements Executor {
         }
 
         return !concurrentTaskQueue.isEmpty();
-    }
-
-    protected final class ScheduledTask implements Runnable, Comparable<ScheduledTask> {
-
-        private Fut fut;
-        private long deadlineNanos;
-        private Runnable task;
-        private long periodNanos = -1;
-        private long delayNanos = -1;
-
-        @Override
-        public void run() {
-            if (task != null) {
-                task.run();
-            }
-
-            if (periodNanos != -1 || delayNanos != -1) {
-                if (periodNanos != -1) {
-                    deadlineNanos += periodNanos;
-                } else {
-                    deadlineNanos = unsafe.nanoClock.nanoTime() + delayNanos;
-                }
-
-                if (deadlineNanos < 0) {
-                    deadlineNanos = Long.MAX_VALUE;
-                }
-
-                if (!scheduledTaskQueue.offer(this)) {
-                    //todo: some log message
-                }
-            } else {
-                if (fut != null) {
-                    fut.complete(null);
-                }
-            }
-        }
-
-        @Override
-        public int compareTo(Eventloop.ScheduledTask that) {
-            if (that.deadlineNanos == this.deadlineNanos) {
-                return 0;
-            }
-
-            return this.deadlineNanos > that.deadlineNanos ? 1 : -1;
-        }
     }
 
     /**
@@ -519,220 +479,6 @@ public abstract class Eventloop implements Executor {
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * Exposes methods that should only be called from within the {@link Eventloop}.
-     */
-    public abstract class Unsafe {
-
-        protected final NanoClock nanoClock;
-
-        protected Unsafe() {
-            this.nanoClock = clockRefreshInterval == 0
-                    ? new StandardNanoClock()
-                    : new CachedNanoClock(clockRefreshInterval);
-        }
-
-        public NanoClock nanoClock() {
-            return nanoClock;
-        }
-
-        /**
-         * Returns the {@link Eventloop} that belongs to this {@link Unsafe} instance.
-         *
-         * @return the Eventloop.
-         */
-        public Eventloop eventloop() {
-            return Eventloop.this;
-        }
-
-        /**
-         * Creates a new {@link AsyncFile} with the given path.
-         *
-         * @param path the path to the AsyncFile.
-         * @return the created AsyncFile.
-         */
-        public abstract AsyncFile newAsyncFile(String path);
-
-        /**
-         * Returns the IOBufferAllocator needed to interact with the {@link AsyncFile}.
-         * <p/>
-         * These buffers could have special requirements. E.g. when Direct I/O is used, the
-         * buffers need to be 4KB aligned and direct.
-         *
-         * @return t
-         */
-        public abstract IOBufferAllocator fileIOBufferAllocator();
-
-        public <E> Fut<E> newCompletedFuture(E value) {
-            Fut<E> fut = futAllocator.allocate();
-            fut.complete(value);
-            return fut;
-        }
-
-        public <E> Fut<E> newFut() {
-            return futAllocator.allocate();
-        }
-
-        /**
-         * Offers a task to be scheduled on the eventloop.
-         *
-         * @param task the task to schedule.
-         * @return true if the task was successfully offered, false otherwise.
-         */
-        public boolean offer(Runnable task) {
-            return localTaskQueue.offer(task);
-        }
-
-        /**
-         * Schedules a one shot action with the given delay.
-         *
-         * @param task  the task to execute.
-         * @param delay the delay
-         * @param unit  the unit of the delay
-         * @return true if the task was successfully scheduled.
-         * @throws NullPointerException     if task or unit is null
-         * @throws IllegalArgumentException when delay smaller than 0.
-         */
-        public boolean schedule(Runnable task, long delay, TimeUnit unit) {
-            checkNotNull(task);
-            checkNotNegative(delay, "delay");
-            checkNotNull(unit);
-
-            ScheduledTask scheduledTask = new ScheduledTask();
-            scheduledTask.task = task;
-            long deadlineNanos = nanoClock.nanoTime() + unit.toNanos(delay);
-            if (deadlineNanos < 0) {
-                // protection against overflow
-                deadlineNanos = Long.MAX_VALUE;
-            }
-            scheduledTask.deadlineNanos = deadlineNanos;
-            return scheduledTaskQueue.offer(scheduledTask);
-        }
-
-        /**
-         * Creates a periodically executing task with a fixed delay between the completion and start of
-         * the task.
-         *
-         * @param task         the task to periodically execute.
-         * @param initialDelay the initial delay
-         * @param delay        the delay between executions.
-         * @param unit         the unit of the initial delay and delay
-         * @return true if the task was successfully executed.
-         */
-        public boolean scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
-            checkNotNull(task);
-            checkNotNegative(initialDelay, "initialDelay");
-            checkNotNegative(delay, "delay");
-            checkNotNull(unit);
-
-            ScheduledTask scheduledTask = new ScheduledTask();
-            scheduledTask.task = task;
-            long deadlineNanos = nanoClock.nanoTime() + unit.toNanos(initialDelay);
-            if (deadlineNanos < 0) {
-                // protection against overflow
-                deadlineNanos = Long.MAX_VALUE;
-            }
-            scheduledTask.deadlineNanos = deadlineNanos;
-            scheduledTask.delayNanos = unit.toNanos(delay);
-            return scheduledTaskQueue.offer(scheduledTask);
-        }
-
-        /**
-         * Creates a periodically executing task with a fixed delay between the start of the task.
-         *
-         * @param task         the task to periodically execute.
-         * @param initialDelay the initial delay
-         * @param period       the period between executions.
-         * @param unit         the unit of the initial delay and delay
-         * @return true if the task was successfully executed.
-         */
-        public boolean scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
-            checkNotNull(task);
-            checkNotNegative(initialDelay, "initialDelay");
-            checkNotNegative(period, "period");
-            checkNotNull(unit);
-
-            ScheduledTask scheduledTask = new ScheduledTask();
-            scheduledTask.task = task;
-            long deadlineNanos = nanoClock.nanoTime() + unit.toNanos(initialDelay);
-            if (deadlineNanos < 0) {
-                // protection against overflow
-                deadlineNanos = Long.MAX_VALUE;
-            }
-            scheduledTask.deadlineNanos = deadlineNanos;
-            scheduledTask.periodNanos = unit.toNanos(period);
-            return scheduledTaskQueue.offer(scheduledTask);
-        }
-
-        public Fut sleep(long delay, TimeUnit unit) {
-            checkNotNegative(delay, "delay");
-            checkNotNull(unit, "unit");
-
-            Fut fut = newFut();
-            ScheduledTask scheduledTask = new ScheduledTask();
-            scheduledTask.fut = fut;
-            long deadlineNanos = nanoClock.nanoTime() + unit.toNanos(delay);
-            if (deadlineNanos < 0) {
-                // protection against overflow
-                deadlineNanos = Long.MAX_VALUE;
-            }
-            scheduledTask.deadlineNanos = deadlineNanos;
-            scheduledTaskQueue.add(scheduledTask);
-            return fut;
-        }
-
-        public <I, O> Fut<List<O>> map(List<I> input, List<O> output, Function<I, O> function) {
-            Fut fut = newFut();
-
-            //todo: task can be pooled
-            Runnable task = new Runnable() {
-                Iterator<I> it = input.iterator();
-
-                @Override
-                public void run() {
-                    if (it.hasNext()) {
-                        I item = it.next();
-                        O result = function.apply(item);
-                        output.add(result);
-                    }
-
-                    if (it.hasNext()) {
-                        unsafe.offer(this);
-                    } else {
-                        fut.complete(output);
-                    }
-                }
-            };
-
-            execute(task);
-            return fut;
-        }
-
-        /**
-         * Keeps calling the loop function until it returns false.
-         *
-         * @param loopFunction the function that is called in a loop.
-         * @return the future that is completed as soon as the loop finishes.
-         */
-        public Fut loop(Function<Eventloop, Boolean> loopFunction) {
-            Fut fut = newFut();
-
-            //todo: task can be pooled
-            Runnable task = new Runnable() {
-                @Override
-                public void run() {
-                    if (loopFunction.apply(Eventloop.this)) {
-                        unsafe.offer(this);
-                    } else {
-                        fut.complete(null);
-                    }
-                }
-            };
-            execute(task);
-            return fut;
         }
     }
 

@@ -233,11 +233,10 @@ public class AltoRuntime {
 
                 int port = toPort(thisAddress, k);
                 tpcPorts.add(port);
-                AsyncServerSocket serverSocket = eventloop.openAsyncServerSocket();
+                AsyncServerSocket serverSocket = eventloop.openTcpAsyncServerSocket();
                 serverSocket.setReceiveBufferSize(socketConfig.receiveBufferSize);
                 serverSocket.setReuseAddress(true);
                 serverSocket.bind(new InetSocketAddress(thisAddress.getInetAddress(), port));
-                serverSocket.listen(10);
                 serverSocket.accept(socket -> {
                     if (socket instanceof NioAsyncSocket) {
                         NioAsyncSocket nioSocket = (NioAsyncSocket) socket;
@@ -383,11 +382,11 @@ public class AltoRuntime {
         return connection;
     }
 
-    public CompletableFuture<AsyncSocket> connect(SocketAddress address, int channelIndex) {
+    public CompletableFuture<Void> connect(SocketAddress address, int channelIndex) {
         int eventloopIndex = HashUtil.hashToIndex(channelIndex, tpcEngine.eventloopCount());
         Eventloop eventloop = tpcEngine.eventloop(eventloopIndex);
 
-        AsyncSocket socket = eventloop.openAsyncSocket();
+        AsyncSocket socket = eventloop.openTcpAsyncSocket();
         if (socket instanceof NioAsyncSocket) {
             NioAsyncSocket nioSocket = (NioAsyncSocket) socket;
             nioSocket.setWriteThrough(writeThrough);

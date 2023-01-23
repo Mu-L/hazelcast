@@ -9,7 +9,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class NettyNopBenchmark {
     public static boolean spin = true;
-    public static int concurrency = 1;
+    public static int concurrency = 64;
     public static long operations = 100 * 1000 * 1000;
 
     public static void main(String[] args) throws InterruptedException {

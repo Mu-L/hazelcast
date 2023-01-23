@@ -83,7 +83,8 @@ public final class CompletionQueue {
             try {
                 completionHandler.handle(res, flags, userdata);
             } catch (Exception e) {
-                logger.severe("Failed to process " + completionHandler + " res:" + res + " flags:" + flags + " userdata:" + userdata, e);
+                logger.severe("Failed to process " + completionHandler + " res:" + res + " flags:"
+                        + flags + " userdata:" + userdata, e);
             }
 
             localHead++;

@@ -250,7 +250,7 @@ public final class IOUringAsyncSocket extends AsyncSocket {
         this.eventloop = checkInstanceOf(IOUringEventloop.class, eventloop, "evenloop");
         this.eventloopThread = this.eventloop.eventloopThread();
         this.eventloop.offer(() -> {
-            IOUringEventloop.IOUringUnsafe unsafe = this.eventloop.unsafe();
+            IOUringUnsafe unsafe = this.eventloop.unsafe();
 
             handler_OP_READ = new Handler_OP_READ();
             userdata_OP_READ = unsafe.nextPermanentHandlerId();
