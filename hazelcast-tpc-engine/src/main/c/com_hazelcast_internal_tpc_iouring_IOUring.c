@@ -34,7 +34,13 @@ Java_com_hazelcast_internal_tpc_iouring_IOUring_init(JNIEnv* env, jobject this_o
         return;
     }
 
-    int ret = io_uring_queue_init(entries, p_ring, flags);
+    struct io_uring_params params;
+    memset(&params, 0, sizeof(struct io_uring_params));
+    params.sq_entries = entries;
+    params.cq_entries = entries;
+    params.flags = flags;
+
+    int ret = io_uring_queue_init_params(entries, p_ring, &params);
     if (ret < 0) {
         throw_exception(env, "io_uring_queue_init", ret);
         return;

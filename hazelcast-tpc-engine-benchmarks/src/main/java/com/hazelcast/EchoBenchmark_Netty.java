@@ -33,7 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadFactory;
 
 
-public class BounceBenchmark_Netty {
+public class EchoBenchmark_Netty {
 
     public static final int port = 5000;
     public static final int concurrency = 1;

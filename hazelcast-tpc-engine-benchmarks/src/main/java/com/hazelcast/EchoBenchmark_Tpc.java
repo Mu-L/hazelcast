@@ -28,6 +28,7 @@ import com.hazelcast.internal.tpc.iobuffer.NonConcurrentIOBufferAllocator;
 import com.hazelcast.internal.tpc.iouring.IOUringEventloopBuilder;
 import com.hazelcast.internal.tpc.nio.NioEventloopBuilder;
 import com.hazelcast.internal.util.ThreadAffinity;
+import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -41,8 +42,15 @@ import static com.hazelcast.internal.tpc.util.BufferUtil.put;
 /**
  * A benchmarks that test the throughput of 2 sockets that are bouncing packets
  * with some payload between them.
+ * <p>
+ * for IO_Uring read:
+ * https://github.com/frevib/io_uring-echo-server/issues/8?spm=a2c65.11461447.0.0.27707555CrwLfj
+ * and check out the IORING_FEAT_FAST_POLL comment
+ *
+ * Good read:
+ * https://www.alibabacloud.com/blog/599544
  */
-public class BounceBenchmark_Tpc {
+public class EchoBenchmark_Tpc {
     public static final int port = 5006;
     // use small buffers to cause a lot of network scheduling overhead (and shake down problems)
     public static final int socketBufferSize = 128 * 1024;
@@ -52,23 +60,19 @@ public class BounceBenchmark_Tpc {
     public static final int concurrency = 1;
     public static final boolean tcpNoDelay = true;
     public static final boolean spin = false;
-    public static final EventloopType eventloopType = EventloopType.NIO;
+    public static final EventloopType eventloopType = EventloopType.IOURING;
     public static final String cpuAffinityClient = "1";
     public static final String cpuAffinityServer = "4";
 
     public static void main(String[] args) throws InterruptedException {
-        EventloopBuilder clientEventloopBuilder = eventloopType == EventloopType.NIO
-                ? new NioEventloopBuilder()
-                : new IOUringEventloopBuilder();
+        EventloopBuilder clientEventloopBuilder = newEventloopBuilder();
         clientEventloopBuilder.setSpin(spin);
         clientEventloopBuilder.setThreadNameSupplier(() -> "Client-Thread");
         clientEventloopBuilder.setThreadAffinity(cpuAffinityClient == null ? null : new ThreadAffinity(cpuAffinityClient));
         Eventloop clientEventloop = clientEventloopBuilder.create();
         clientEventloop.start();
 
-        EventloopBuilder serverEventloopBuilder = eventloopType == EventloopType.NIO
-                ? new NioEventloopBuilder()
-                : new IOUringEventloopBuilder();
+        EventloopBuilder serverEventloopBuilder = newEventloopBuilder();
         serverEventloopBuilder.setSpin(spin);
         serverEventloopBuilder.setThreadNameSupplier(() -> "Server-Thread");
         serverEventloopBuilder.setThreadAffinity(cpuAffinityServer == null ? null : new ThreadAffinity(cpuAffinityServer));
@@ -101,13 +105,22 @@ public class BounceBenchmark_Tpc {
         latch.await();
 
         long duration = System.currentTimeMillis() - start;
-        System.out.println("Duration "+duration+" ms");
+        System.out.println("Duration " + duration + " ms");
         System.out.println("Throughput:" + (iterations * 1000 / duration) + " ops");
 
         clientSocket.close();
         serverSocket.close();
 
         System.exit(0);
+    }
+
+    @NotNull
+    private static EventloopBuilder newEventloopBuilder() {
+        if (eventloopType == EventloopType.NIO) {
+            return new NioEventloopBuilder();
+        } else {
+            return new IOUringEventloopBuilder();
+        }
     }
 
     private static AsyncSocket newClient(Eventloop clientEventloop, SocketAddress serverAddress, CountDownLatch latch) {

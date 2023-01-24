@@ -23,18 +23,15 @@ import com.hazelcast.internal.tpc.Eventloop;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static com.hazelcast.internal.tpc.iouring.IOUring.IORING_OP_ACCEPT;
-import static com.hazelcast.internal.tpc.iouring.Linux.SIZEOF_SOCKADDR_STORAGE;
+import static com.hazelcast.internal.tpc.iouring.IOUring.IORING_OP_READ;
 import static com.hazelcast.internal.tpc.iouring.Linux.SOCK_CLOEXEC;
 import static com.hazelcast.internal.tpc.iouring.Linux.SOCK_NONBLOCK;
 import static com.hazelcast.internal.tpc.iouring.Linux.strerror;
 import static com.hazelcast.internal.tpc.iouring.Socket.AF_INET;
-import static com.hazelcast.internal.tpc.util.BitUtil.SIZEOF_LONG;
 import static com.hazelcast.internal.tpc.util.BufferUtil.addressOf;
 import static com.hazelcast.internal.tpc.util.Preconditions.checkNotNegative;
 import static com.hazelcast.internal.tpc.util.Preconditions.checkNotNull;
@@ -228,7 +225,9 @@ public final class IOUringAsyncServerSocket extends AsyncServerSocket {
         );
     }
 
+
     private class Handler_OP_ACCEPT implements IOCompletionHandler {
+
         @Override
         public void handle(int res, int flags, long userdata) {
             try {
@@ -257,26 +256,4 @@ public final class IOUringAsyncServerSocket extends AsyncServerSocket {
         }
     }
 
-    // There will only be 1 accept request at any given moment in the system
-    // So we don't need to worry about concurrent access to the same AcceptMemory.
-    static class AcceptMemory {
-        final ByteBuffer memory;
-        final long memoryAddress;
-        final ByteBuffer lengthMemory;
-        final long lengthMemoryAddress;
-
-        AcceptMemory() {
-            this.memory = ByteBuffer.allocateDirect(SIZEOF_SOCKADDR_STORAGE);
-            memory.order(ByteOrder.nativeOrder());
-            this.memoryAddress = addressOf(memory);
-
-            this.lengthMemory = ByteBuffer.allocateDirect(SIZEOF_LONG);
-            lengthMemory.order(ByteOrder.nativeOrder());
-
-            // Needs to be initialized to the size of acceptedAddressMemory.
-            // See https://man7.org/linux/man-pages/man2/accept.2.html
-            this.lengthMemory.putLong(0, SIZEOF_SOCKADDR_STORAGE);
-            this.lengthMemoryAddress = addressOf(lengthMemory);
-        }
-    }
 }
