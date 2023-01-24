@@ -31,7 +31,7 @@ import static com.hazelcast.internal.tpc.util.BufferUtil.addressOf;
  */
 public class EchoBenchmark_Naked_IOUring {
 
-    public static final int iterations = 2_000_000;
+    public static final long iterations = 40_000_000;
     public static final String cpuAffinityClient = "1";
     public static final String cpuAffinityServer = "4";
 
@@ -98,7 +98,7 @@ public class EchoBenchmark_Naked_IOUring {
                 this.sendBuffer = ByteBuffer.allocateDirect(64 * 1024);
                 this.sendBufferAddress = addressOf(sendBuffer);
 
-                sendBuffer.putInt(iterations);
+                sendBuffer.putLong(iterations);
                 sendBuffer.flip();
 
                 //System.out.println("sendBuffer.remaining");
@@ -147,7 +147,7 @@ public class EchoBenchmark_Naked_IOUring {
 
                     receiveBuffer.position(receiveBuffer.position() + res);
                     receiveBuffer.flip();
-                    int round = receiveBuffer.getInt();
+                    long round = receiveBuffer.getLong();
                     //System.out.println("Client round:" + round);
                     receiveBuffer.clear();
 
@@ -156,7 +156,7 @@ public class EchoBenchmark_Naked_IOUring {
                         System.out.println("Done");
                         return;
                     }
-                    sendBuffer.putInt(round - 1);
+                    sendBuffer.putLong(round - 1);
                     sendBuffer.flip();
 
                     sq.offer(
@@ -305,12 +305,12 @@ public class EchoBenchmark_Naked_IOUring {
 
                         userdata_OP_READ.buffer.position(userdata.buffer.position() + res);
                         userdata_OP_READ.buffer.flip();
-                        int round = userdata_OP_READ.buffer.getInt();
+                        long round = userdata_OP_READ.buffer.getLong();
                         //System.out.println("Server round:" + round);
                         userdata_OP_READ.buffer.clear();
 
                         Userdata userdata_OP_WRITE = userdataArray[userdata.id + 1];
-                        userdata_OP_WRITE.buffer.putInt(round);
+                        userdata_OP_WRITE.buffer.putLong(round);
                         userdata_OP_WRITE.buffer.flip();
 
                         sq.offer(
