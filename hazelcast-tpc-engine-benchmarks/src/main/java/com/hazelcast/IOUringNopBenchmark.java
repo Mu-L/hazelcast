@@ -3,7 +3,6 @@ package com.hazelcast;
 import com.hazelcast.internal.tpc.iouring.CompletionQueue;
 import com.hazelcast.internal.tpc.iouring.IOCompletionHandler;
 import com.hazelcast.internal.tpc.iouring.IOUring;
-import com.hazelcast.internal.tpc.iouring.IOUringAsyncSocket;
 import com.hazelcast.internal.tpc.iouring.Linux;
 import com.hazelcast.internal.tpc.iouring.SubmissionQueue;
 

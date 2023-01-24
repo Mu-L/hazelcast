@@ -11,9 +11,9 @@ import java.io.UncheckedIOException;
 import java.util.concurrent.CountDownLatch;
 
 public class LwjglIOUringNopBenchmark {
-    public static boolean spin=true;
+    public static boolean spin = true;
     public static int concurrency = 64;
-    public static long operations = 1000* 1000 * 1000;
+    public static long operations = 1000 * 1000 * 1000;
 
     public static void main(String[] args) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
@@ -46,9 +46,9 @@ public class LwjglIOUringNopBenchmark {
             }
 
             for (; ; ) {
-                if(spin){
+                if (spin) {
                     sq.submit();
-                }else{
+                } else {
                     sq.submitAndWait();
                 }
                 cq.process(handler);

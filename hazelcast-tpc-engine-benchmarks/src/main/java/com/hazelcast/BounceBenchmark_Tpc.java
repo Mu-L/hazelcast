@@ -20,21 +20,20 @@ import com.hazelcast.internal.tpc.AsyncServerSocket;
 import com.hazelcast.internal.tpc.AsyncSocket;
 import com.hazelcast.internal.tpc.Eventloop;
 import com.hazelcast.internal.tpc.EventloopBuilder;
+import com.hazelcast.internal.tpc.EventloopType;
 import com.hazelcast.internal.tpc.ReadHandler;
 import com.hazelcast.internal.tpc.iobuffer.IOBuffer;
 import com.hazelcast.internal.tpc.iobuffer.IOBufferAllocator;
 import com.hazelcast.internal.tpc.iobuffer.NonConcurrentIOBufferAllocator;
+import com.hazelcast.internal.tpc.iouring.IOUringEventloopBuilder;
+import com.hazelcast.internal.tpc.nio.NioEventloopBuilder;
 import com.hazelcast.internal.util.ThreadAffinity;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 
-import static com.hazelcast.BenchmarkSupport.terminate;
 import static com.hazelcast.internal.tpc.util.BitUtil.SIZEOF_INT;
 import static com.hazelcast.internal.tpc.util.BitUtil.SIZEOF_LONG;
 import static com.hazelcast.internal.tpc.util.BufferUtil.put;
@@ -43,54 +42,46 @@ import static com.hazelcast.internal.tpc.util.BufferUtil.put;
  * A benchmarks that test the throughput of 2 sockets that are bouncing packets
  * with some payload between them.
  */
-public abstract class AsyncSocketBounceBenchmark {
+public class BounceBenchmark_Tpc {
+    public static final int port = 5006;
     // use small buffers to cause a lot of network scheduling overhead (and shake down problems)
-    public static int socketBufferSize = 128 * 1024;
-    public static boolean useDirectByteBuffers = true;
-    public static int iterations = 2_000_000;
-    public static int payloadSize = 1;
-    public static int concurrency = 1;
-    public static boolean tcpNoDelay = true;
-    public static boolean spin = false;
-    public String cpuAffinityClient = "1";
-    public String cpuAffinityServer = "4";
-    private Eventloop clientEventloop;
-    private Eventloop serverEventloop;
+    public static final int socketBufferSize = 128 * 1024;
+    public static final boolean useDirectByteBuffers = true;
+    public static final long iterations = 8_000_000L;
+    public static final int payloadSize = 0;
+    public static final int concurrency = 1;
+    public static final boolean tcpNoDelay = true;
+    public static final boolean spin = false;
+    public static final EventloopType eventloopType = EventloopType.NIO;
+    public static final String cpuAffinityClient = "1";
+    public static final String cpuAffinityServer = "4";
 
-    public abstract EventloopBuilder createEventloopBuilder();
-
-    @Before
-    public void before() {
-        EventloopBuilder clientEventloopBuilder = createEventloopBuilder();
+    public static void main(String[] args) throws InterruptedException {
+        EventloopBuilder clientEventloopBuilder = eventloopType == EventloopType.NIO
+                ? new NioEventloopBuilder()
+                : new IOUringEventloopBuilder();
         clientEventloopBuilder.setSpin(spin);
         clientEventloopBuilder.setThreadNameSupplier(() -> "Client-Thread");
         clientEventloopBuilder.setThreadAffinity(cpuAffinityClient == null ? null : new ThreadAffinity(cpuAffinityClient));
-        clientEventloop = clientEventloopBuilder.create();
+        Eventloop clientEventloop = clientEventloopBuilder.create();
         clientEventloop.start();
 
-        EventloopBuilder serverEventloopBuilder = createEventloopBuilder();
+        EventloopBuilder serverEventloopBuilder = eventloopType == EventloopType.NIO
+                ? new NioEventloopBuilder()
+                : new IOUringEventloopBuilder();
         serverEventloopBuilder.setSpin(spin);
         serverEventloopBuilder.setThreadNameSupplier(() -> "Server-Thread");
         serverEventloopBuilder.setThreadAffinity(cpuAffinityServer == null ? null : new ThreadAffinity(cpuAffinityServer));
-        serverEventloop = serverEventloopBuilder.create();
+        Eventloop serverEventloop = serverEventloopBuilder.create();
         serverEventloop.start();
-    }
 
-    @After
-    public void after() {
-        terminate(clientEventloop);
-        terminate(serverEventloop);
-    }
+        SocketAddress serverAddress = new InetSocketAddress("127.0.0.1", port);
 
-    @Test
-    public void test() throws InterruptedException {
-        SocketAddress serverAddress = new InetSocketAddress("127.0.0.1", 5000);
-
-        AsyncServerSocket serverSocket = newServer(serverAddress);
+        AsyncServerSocket serverSocket = newServer(serverEventloop, serverAddress);
 
         CountDownLatch latch = new CountDownLatch(concurrency);
 
-        AsyncSocket clientSocket = newClient(serverAddress, latch);
+        AsyncSocket clientSocket = newClient(clientEventloop, serverAddress, latch);
 
         long start = System.currentTimeMillis();
 
@@ -110,10 +101,16 @@ public abstract class AsyncSocketBounceBenchmark {
         latch.await();
 
         long duration = System.currentTimeMillis() - start;
+        System.out.println("Duration "+duration+" ms");
         System.out.println("Throughput:" + (iterations * 1000 / duration) + " ops");
+
+        clientSocket.close();
+        serverSocket.close();
+
+        System.exit(0);
     }
 
-    private AsyncSocket newClient(SocketAddress serverAddress, CountDownLatch latch) {
+    private static AsyncSocket newClient(Eventloop clientEventloop, SocketAddress serverAddress, CountDownLatch latch) {
         AsyncSocket clientSocket = clientEventloop.openTcpAsyncSocket();
         clientSocket.setTcpNoDelay(tcpNoDelay);
         clientSocket.setSendBufferSize(socketBufferSize);
@@ -178,9 +175,10 @@ public abstract class AsyncSocketBounceBenchmark {
         return clientSocket;
     }
 
-    private AsyncServerSocket newServer(SocketAddress serverAddress) {
+    private static AsyncServerSocket newServer(Eventloop serverEventloop, SocketAddress serverAddress) {
         AsyncServerSocket serverSocket = serverEventloop.openTcpAsyncServerSocket();
         serverSocket.setReceiveBufferSize(socketBufferSize);
+        serverSocket.setReusePort(true);
         serverSocket.bind(serverAddress);
 
         serverSocket.accept(socket -> {
@@ -195,7 +193,6 @@ public abstract class AsyncSocketBounceBenchmark {
 
                 @Override
                 public void onRead(ByteBuffer receiveBuffer) {
-
                     for (; ; ) {
                         if (payloadSize == -1) {
                             if (receiveBuffer.remaining() < SIZEOF_INT + SIZEOF_LONG) {

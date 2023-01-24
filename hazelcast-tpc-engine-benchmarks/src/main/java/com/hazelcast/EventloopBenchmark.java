@@ -4,7 +4,6 @@ package com.hazelcast;
 import com.hazelcast.internal.tpc.Eventloop;
 import com.hazelcast.internal.tpc.EventloopBuilder;
 import com.hazelcast.internal.tpc.Unsafe;
-import com.hazelcast.internal.tpc.iouring.IOUringEventloopBuilder;
 import com.hazelcast.internal.tpc.nio.NioEventloopBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -25,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 1)
-@Threads(value =1 )
+@Threads(value = 1)
 public class EventloopBenchmark {
 
     public static final int OPERATIONS = 100 * 1000 * 1000;
@@ -58,7 +57,7 @@ public class EventloopBenchmark {
 //            }, 1000, SECONDS);
 
             for (int k = 0; k < concurrency; k++) {
-                Task task = new Task(eventloop, OPERATIONS/concurrency, latch, useUnsafe);
+                Task task = new Task(eventloop, OPERATIONS / concurrency, latch, useUnsafe);
                 if (useUnsafe) {
                     eventloop.unsafe().offer(task);
                 } else {
