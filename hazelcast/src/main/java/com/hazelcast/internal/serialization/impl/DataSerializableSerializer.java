@@ -69,6 +69,10 @@ final class DataSerializableSerializer implements StreamSerializer<DataSerializa
                     .forEachRemaining(hooks::add);
 
             for (DataSerializerHook hook : hooks) {
+                if (!hook.shouldRegister()) {
+                    continue;
+                }
+
                 final DataSerializableFactory factory = hook.createFactory();
                 if (factory != null) {
                     register(hook.getFactoryId(), factory);
@@ -216,10 +220,9 @@ final class DataSerializableSerializer implements StreamSerializer<DataSerializa
     }
 
     private Exception tryClarifyNoSuchMethodException(ClassLoader classLoader, String className, Exception exception) {
-        if (!(exception instanceof NoSuchMethodException)) {
+        if (!(exception instanceof NoSuchMethodException noSuchMethodException)) {
             return exception;
         }
-        NoSuchMethodException noSuchMethodException = (NoSuchMethodException) exception;
 
         Class<?> aClass;
         try {
@@ -268,11 +271,11 @@ final class DataSerializableSerializer implements StreamSerializer<DataSerializa
     }
 
     private static void setOutputVersion(ObjectDataOutput out, Version version) {
-        ((VersionedObjectDataOutput) out).setVersion(version);
+        out.setVersion(version);
     }
 
     private static void setInputVersion(ObjectDataInput in, Version version) {
-        ((VersionedObjectDataInput) in).setVersion(version);
+        in.setVersion(version);
     }
 
     /**

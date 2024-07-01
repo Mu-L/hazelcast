@@ -28,8 +28,8 @@ import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.internal.util.Preconditions.checkPositive;
 
 /**
- * Configuration for storing and pre-loading Near Cache keys.
- *
+ * Configuration for storing and preloading Near Cache keys.
+ * <p>
  * Preloader re-populates Near Cache after client/server restart to provide
  * fast access.
  *

@@ -41,7 +41,7 @@ public class VectorIndexConfig implements NamedConfig, IdentifiedDataSerializabl
 
     /**
      * Name of index. Names of indexes within a single VectorCollection
-     * must be unique and non empty. Valid characters are {@code [a-zA-Z0-9_-]}.
+     * must be unique and non-empty. Valid characters are {@code [a-zA-Z0-9_-]}.
      */
     private String indexName;
     private Metric metric;
@@ -288,7 +288,9 @@ public class VectorIndexConfig implements NamedConfig, IdentifiedDataSerializabl
     }
 
     private static void validateName(String name) {
-        requireNonNull(name);
+        if (name == null) {
+            return;
+        }
         String allowedSymbols = "[a-zA-Z0-9\\-_]+";
         if (!name.matches(allowedSymbols)) {
             throw new IllegalArgumentException("The name of the vector index "

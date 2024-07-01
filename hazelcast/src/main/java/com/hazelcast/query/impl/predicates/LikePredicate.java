@@ -24,6 +24,7 @@ import com.hazelcast.query.impl.QueryContext;
 import com.hazelcast.query.impl.QueryableEntry;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 @BinaryInterface
 public class LikePredicate extends AbstractPredicate implements IndexAwarePredicate {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     protected String expression;
@@ -146,11 +148,10 @@ public class LikePredicate extends AbstractPredicate implements IndexAwarePredic
         if (!super.equals(o)) {
             return false;
         }
-        if (!(o instanceof LikePredicate)) {
+        if (!(o instanceof LikePredicate that)) {
             return false;
         }
 
-        LikePredicate that = (LikePredicate) o;
         if (!that.canEqual(this)) {
             return false;
         }

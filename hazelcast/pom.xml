@@ -47,7 +47,6 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>${git.commit.id.maven.plugin.version}</version>
                 <executions>
                     <execution>
                         <goals>
@@ -210,8 +209,8 @@
                         </goals>
                         <configuration>
                             <finalName>${project.build.finalName}</finalName>
-                            <createSourcesJar>true</createSourcesJar>
-                            <shadeSourcesContent>true</shadeSourcesContent>
+                            <createSourcesJar>${maven.shade.createSourcesJar}</createSourcesJar>
+                            <shadeSourcesContent>${maven.shade.createSourcesJar}</shadeSourcesContent>
                             <shadeTestJar>true</shadeTestJar>
                             <artifactSet>
                                 <excludes>
@@ -493,7 +492,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
-                <version>3.3.2</version>
                 <executions>
                     <execution>
                         <phase>clean</phase>
@@ -516,7 +514,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven.compiler.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>usercodedeployment-sample</id>
@@ -814,7 +811,6 @@
         <dependency>
             <groupId>org.hdrhistogram</groupId>
             <artifactId>HdrHistogram</artifactId>
-            <version>2.2.1</version>
             <scope>test</scope>
         </dependency>
 
@@ -926,7 +922,6 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
-            <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -971,7 +966,6 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-resolver-provider</artifactId>
-            <version>3.9.6</version>
             <scope>test</scope>
         </dependency>
 

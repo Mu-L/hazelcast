@@ -51,6 +51,7 @@ import com.hazelcast.client.impl.protocol.codec.CacheSetExpiryPolicyCodec;
 import com.hazelcast.client.impl.protocol.codec.CacheSizeCodec;
 import com.hazelcast.client.impl.protocol.codec.CardinalityEstimatorAddCodec;
 import com.hazelcast.client.impl.protocol.codec.CardinalityEstimatorEstimateCodec;
+import com.hazelcast.client.impl.protocol.codec.ClientAddCPGroupViewListenerCodec;
 import com.hazelcast.client.impl.protocol.codec.ClientAddClusterViewListenerCodec;
 import com.hazelcast.client.impl.protocol.codec.ClientAddDistributedObjectListenerCodec;
 import com.hazelcast.client.impl.protocol.codec.ClientAddMigrationListenerCodec;
@@ -137,6 +138,7 @@ import com.hazelcast.client.impl.protocol.codec.ListSubCodec;
 import com.hazelcast.client.impl.protocol.codec.MCApplyMCConfigCodec;
 import com.hazelcast.client.impl.protocol.codec.MCChangeClusterStateCodec;
 import com.hazelcast.client.impl.protocol.codec.MCChangeClusterVersionCodec;
+import com.hazelcast.client.impl.protocol.codec.MCDemoteDataMemberCodec;
 import com.hazelcast.client.impl.protocol.codec.MCGetClusterMetadataCodec;
 import com.hazelcast.client.impl.protocol.codec.MCGetMapConfigCodec;
 import com.hazelcast.client.impl.protocol.codec.MCGetMemberConfigCodec;
@@ -446,6 +448,7 @@ import com.hazelcast.client.impl.protocol.task.cache.CacheSetExpiryPolicyMessage
 import com.hazelcast.client.impl.protocol.task.cache.CacheSizeMessageTask;
 import com.hazelcast.client.impl.protocol.task.cardinality.CardinalityEstimatorAddMessageTask;
 import com.hazelcast.client.impl.protocol.task.cardinality.CardinalityEstimatorEstimateMessageTask;
+import com.hazelcast.client.impl.protocol.task.cp.AddCPGroupViewListenerMessageTask;
 import com.hazelcast.client.impl.protocol.task.crdt.pncounter.PNCounterAddMessageTask;
 import com.hazelcast.client.impl.protocol.task.crdt.pncounter.PNCounterGetConfiguredReplicaCountMessageTask;
 import com.hazelcast.client.impl.protocol.task.crdt.pncounter.PNCounterGetMessageTask;
@@ -510,6 +513,7 @@ import com.hazelcast.client.impl.protocol.task.management.ChangeClusterVersionMe
 import com.hazelcast.client.impl.protocol.task.management.ChangeWanReplicationStateMessageTask;
 import com.hazelcast.client.impl.protocol.task.management.CheckWanConsistencyMessageTask;
 import com.hazelcast.client.impl.protocol.task.management.ClearWanQueuesMessageTask;
+import com.hazelcast.client.impl.protocol.task.management.DemoteDataMemberMessageTask;
 import com.hazelcast.client.impl.protocol.task.management.GetClusterMetadataMessageTask;
 import com.hazelcast.client.impl.protocol.task.management.GetMapConfigMessageTask;
 import com.hazelcast.client.impl.protocol.task.management.GetMemberConfigMessageTask;
@@ -1459,6 +1463,8 @@ public class DefaultMessageTaskFactoryProvider implements MessageTaskFactoryProv
                 (cm, con) -> new TriggerPartitionAssignmentMessageTask(cm, node, con));
         factories.put(ClientTpcAuthenticationCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new ClientTpcAuthenticationMessageTask(cm, node, con));
+        factories.put(ClientAddCPGroupViewListenerCodec.REQUEST_MESSAGE_TYPE,
+                (cm, con) -> new AddCPGroupViewListenerMessageTask(cm, node, con));
     }
 
     private void initializeQueueTaskFactories() {
@@ -1683,6 +1689,8 @@ public class DefaultMessageTaskFactoryProvider implements MessageTaskFactoryProv
                 (cm, con) -> new ReloadConfigMessageTask(cm, node, con));
         factories.put(MCUpdateConfigCodec.REQUEST_MESSAGE_TYPE,
                 (cm, con) -> new UpdateConfigMessageTask(cm, node, con));
+        factories.put(MCDemoteDataMemberCodec.REQUEST_MESSAGE_TYPE,
+                (cm, con) -> new DemoteDataMemberMessageTask(cm, node, con));
     }
 
     private void initializeSqlTaskFactories() {

@@ -21,6 +21,8 @@ import com.hazelcast.client.ClientNotAllowedInClusterException;
 import com.hazelcast.client.HazelcastClientNotActiveException;
 import com.hazelcast.client.HazelcastClientOfflineException;
 import com.hazelcast.client.LoadBalancer;
+import com.hazelcast.client.UnsupportedClusterVersionException;
+import com.hazelcast.client.UnsupportedRoutingModeException;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConnectionStrategyConfig.ReconnectMode;
 import com.hazelcast.client.config.ClientNetworkConfig;
@@ -36,7 +38,7 @@ import com.hazelcast.client.impl.connection.Addresses;
 import com.hazelcast.client.impl.connection.ClientConnection;
 import com.hazelcast.client.impl.connection.ClientConnectionManager;
 import com.hazelcast.client.impl.management.ClientConnectionProcessListener;
-import com.hazelcast.client.impl.management.ClientConnectionProcessListenerRunner;
+import com.hazelcast.client.impl.management.ClientConnectionProcessListenerRegistry;
 import com.hazelcast.client.impl.protocol.AuthenticationStatus;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientAuthenticationCodec;
@@ -46,6 +48,7 @@ import com.hazelcast.client.impl.spi.impl.ClientExecutionServiceImpl;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.client.impl.spi.impl.ClientInvocationFuture;
 import com.hazelcast.client.impl.spi.impl.ClientPartitionServiceImpl;
+import com.hazelcast.client.util.ClientConnectivityLogger;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.MembershipEvent;
@@ -111,6 +114,7 @@ import java.util.function.Function;
 import static com.hazelcast.client.config.ClientConnectionStrategyConfig.ReconnectMode.OFF;
 import static com.hazelcast.client.config.ConnectionRetryConfig.DEFAULT_CLUSTER_CONNECT_TIMEOUT_MILLIS;
 import static com.hazelcast.client.config.ConnectionRetryConfig.FAILOVER_CLIENT_DEFAULT_CLUSTER_CONNECT_TIMEOUT_MILLIS;
+import static com.hazelcast.client.impl.connection.tcp.AuthenticationKeyValuePairConstants.ROUTING_MODE_NOT_SUPPORTED_MESSAGE;
 import static com.hazelcast.client.impl.management.ManagementCenterService.MC_CLIENT_MODE_PROP;
 import static com.hazelcast.client.impl.protocol.AuthenticationStatus.NOT_ALLOWED_IN_CLUSTER;
 import static com.hazelcast.client.properties.ClientProperty.HEARTBEAT_TIMEOUT;
@@ -163,7 +167,7 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
     private final int connectionTimeoutMillis;
     private final HazelcastClientInstanceImpl client;
     private final Collection<ConnectionListener> connectionListeners = new CopyOnWriteArrayList<>();
-    private final ClientConnectionProcessListenerRunner connectionProcessListenerRunner;
+    private final ClientConnectionProcessListenerRegistry connectionProcessListenerRunner;
     private final NioNetworking networking;
 
     private final long authenticationTimeout;
@@ -178,6 +182,7 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
     private final boolean shuffleMemberList;
     private final WaitStrategy waitStrategy;
     private final ClusterDiscoveryService clusterDiscoveryService;
+    private final ClientConnectivityLogger connectivityLogger;
 
     private final boolean asyncStart;
     private final ReconnectMode reconnectMode;
@@ -264,9 +269,10 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
         this.isTpcAwareClient = config.getTpcConfig().isEnabled();
         this.asyncStart = config.getConnectionStrategyConfig().isAsyncStart();
         this.reconnectMode = config.getConnectionStrategyConfig().getReconnectMode();
-        this.connectionProcessListenerRunner = new ClientConnectionProcessListenerRunner(client);
+        this.connectionProcessListenerRunner = new ClientConnectionProcessListenerRegistry(client);
         this.skipMemberListDuringReconnection = properties.getBoolean(SKIP_MEMBER_LIST_DURING_RECONNECTION);
         this.clientClusterService = client.getClientClusterService();
+        this.connectivityLogger = new ClientConnectivityLogger(loggingService, executor, properties);
     }
 
     private static RoutingMode decideRoutingMode(ClientConfig config) {
@@ -415,7 +421,6 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
             connection.close("Hazelcast client is shutting down", null);
         }
 
-        connectionProcessListenerRunner.stop();
         stopNetworking();
         connectionListeners.clear();
         clusterDiscoveryService.current().destroy();
@@ -456,7 +461,7 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
                     }
                 }
             } catch (Throwable e) {
-                logger.warning("Could not connect to any cluster, shutting down the client: " + e.getMessage());
+                logger.warning("Could not connect to any cluster, shutting down the client", e);
                 shutdownWithExternalThread();
             }
         });
@@ -520,7 +525,8 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
         try {
             logger.info("Trying to connect to " + target);
             return getOrConnectFunction.apply(target);
-        } catch (InvalidConfigurationException e) {
+        } catch (InvalidConfigurationException | UnsupportedRoutingModeException
+                 | UnsupportedClusterVersionException e) {
             logger.warning("Exception during initial connection to " + target + ": " + e);
             throw rethrow(e);
         } catch (ClientNotAllowedInClusterException e) {
@@ -580,6 +586,16 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
                  | InvalidConfigurationException e) {
             logger.warning("Stopped trying on the cluster: " + context.getClusterName()
                     + " reason: " + e.getMessage());
+        } catch (UnsupportedRoutingModeException e) {
+            connectionProcessListenerRunner.onClusterConnectionFailed(context.getClusterName());
+            logger.warning("Stopped trying on the cluster: " + context.getClusterName()
+                    + " reason: " + e.getMessage());
+            throw new InvalidConfigurationException(e.getMessage());
+        } catch (UnsupportedClusterVersionException e) {
+            connectionProcessListenerRunner.onClusterConnectionFailed(context.getClusterName());
+            logger.warning("Stopped trying on the cluster: " + context.getClusterName()
+                    + " reason: " + e.getMessage());
+            throw new ClientNotAllowedInClusterException(e.getMessage());
         }
 
         connectionProcessListenerRunner.onClusterConnectionFailed(context.getClusterName());
@@ -731,10 +747,6 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
     private void fireConnectionEvent(TcpClientConnection connection, boolean isAdded) {
         if (!isAlive()) {
             return;
-        }
-        if (!isAdded) {
-            clientClusterService.getSubsetMembers()
-                    .onConnectionRemoved(connection);
         }
         try {
             executor.execute(() -> {
@@ -904,6 +916,7 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
 
         synchronized (clientStateMutex) {
             if (activeConnections.remove(memberUuid, connection)) {
+                clientClusterService.getSubsetMembers().onConnectionRemoved(connection);
                 logger.info("Removed connection to endpoint: " + endpoint + ":" + memberUuid + ", connection: " + connection);
                 if (activeConnections.isEmpty()) {
                     if (clientState == ClientState.INITIALIZED_ON_CLUSTER) {
@@ -915,6 +928,7 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
                 }
 
                 fireConnectionEvent(connection, false);
+                submitConnectivityLoggingTask();
             } else if (logger.isFinestEnabled()) {
                 logger.finest("Destroying a connection, but there is no mapping " + endpoint + ":" + memberUuid
                         + " -> " + connection + " in the connection map.");
@@ -1135,6 +1149,7 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
                     + ", local address: " + connection.getLocalSocketAddress());
 
             fireConnectionEvent(connection, true);
+            submitConnectivityLoggingTask();
         }
 
         // It could happen that this connection is already closed and
@@ -1162,8 +1177,18 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
 
         if (response.isKeyValuePairsExists()) {
             Map<String, String> keyValuePairs = Collections.unmodifiableMap(response.getKeyValuePairs());
+            // Pass along KV pairs for MULTI_MEMBER routing if required
             client.getClientClusterService()
                     .updateOnAuth(connection.getClusterUuid(), connection.getRemoteUuid(), keyValuePairs);
+
+            // Pass CP leadership data to our tracking service
+            client.getCPGroupViewService().initializeKnownLeaders(keyValuePairs);
+        } else {
+            // If there are no key-value pairs, we have connected to a member that is older than 5_5
+            // this is unsupported for clients operating with subset routing mode.
+            if (routingMode.equals(RoutingMode.SUBSET)) {
+                throw new UnsupportedClusterVersionException(ROUTING_MODE_NOT_SUPPORTED_MESSAGE);
+            }
         }
     }
 
@@ -1272,10 +1297,11 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
         Credentials credentials = currentContext.getCredentialsFactory().newCredentials(toAddress);
         String clusterName = currentContext.getClusterName();
         currentCredentials = credentials;
+        boolean cpDirectToLeader = client.getCPGroupViewService().isDirectToLeaderEnabled();
         byte routingModeByte = (byte) client.getConnectionManager().getRoutingMode().ordinal();
         if (credentials instanceof PasswordCredentials passwordCredentials) {
             return encodePasswordCredentialsRequest(clusterName, passwordCredentials,
-                    ss.getVersion(), clientVersion, routingModeByte);
+                    ss.getVersion(), clientVersion, routingModeByte, cpDirectToLeader);
         } else {
             byte[] secretBytes;
             if (credentials instanceof TokenCredentials tokenCredentials) {
@@ -1284,26 +1310,29 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
                 secretBytes = ss.toDataWithSchema(credentials).toByteArray();
             }
 
-            return encodeCustomCredentialsRequest(clusterName, secretBytes, ss.getVersion(), clientVersion, routingModeByte);
+            return encodeCustomCredentialsRequest(clusterName, secretBytes, ss.getVersion(), clientVersion, routingModeByte,
+                    cpDirectToLeader);
         }
     }
 
     private ClientMessage encodePasswordCredentialsRequest(String clusterName,
                                                            PasswordCredentials credentials,
                                                            byte serializationVersion,
-                                                           String clientVersion, byte routingMode) {
+                                                           String clientVersion, byte routingMode,
+                                                           boolean cpDirectToLeader) {
         return ClientAuthenticationCodec.encodeRequest(clusterName, credentials.getName(),
                 credentials.getPassword(), clientUuid, connectionType, serializationVersion,
-                clientVersion, client.getName(), labels, routingMode);
+                clientVersion, client.getName(), labels, routingMode, cpDirectToLeader);
     }
 
     private ClientMessage encodeCustomCredentialsRequest(String clusterName,
                                                          byte[] secretBytes,
                                                          byte serializationVersion,
                                                          String clientVersion,
-                                                         byte routingMode) {
+                                                         byte routingMode,
+                                                         boolean cpDirectToLeader) {
         return ClientAuthenticationCustomCodec.encodeRequest(clusterName, secretBytes, clientUuid,
-                connectionType, serializationVersion, clientVersion, client.getName(), labels, routingMode);
+                connectionType, serializationVersion, clientVersion, client.getName(), labels, routingMode, cpDirectToLeader);
     }
 
     protected void checkClientActive() {
@@ -1543,5 +1572,10 @@ public class TcpClientConnectionManager implements ClientConnectionManager, Memb
                     new TargetDisconnectedException("The client has closed the connection to this member,"
                             + " after receiving a member left event from the cluster. " + connection));
         }
+    }
+
+    private void submitConnectivityLoggingTask() {
+        connectivityLogger.submitLoggingTask(clientClusterService.getEffectiveMemberList(),
+                clientClusterService.getMemberList());
     }
 }

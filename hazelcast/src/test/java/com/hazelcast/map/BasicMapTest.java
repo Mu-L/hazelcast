@@ -56,6 +56,7 @@ import testsubjects.StaticSerializableBiFunction;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serial;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -134,19 +135,22 @@ public class BasicMapTest extends HazelcastTestSupport {
     public void init() {
         TestHazelcastInstanceFactory factory = createHazelcastInstanceFactory(INSTANCE_COUNT);
         instances = factory.newInstances(() -> getConfig(), INSTANCE_COUNT);
+        assertClusterSizeEventually(INSTANCE_COUNT, instances);
     }
 
     @Override
     protected Config getConfig() {
         Config cfg = smallInstanceConfigWithoutJetAndMetrics();
-        cfg.getMapConfig("default")
+        MapConfig defaultConfig = cfg.getMapConfig("default")
                 .setStatisticsEnabled(statisticsEnabled)
                 .setPerEntryStatsEnabled(perEntryStatsEnabled);
+        defaultConfig.getMerkleTreeConfig().setEnabled(false);
 
         MapConfig mapConfig = new MapConfig("mapWithTTL*");
         mapConfig.setTimeToLiveSeconds(1);
         mapConfig.setStatisticsEnabled(statisticsEnabled);
         mapConfig.setPerEntryStatsEnabled(perEntryStatsEnabled);
+        mapConfig.getMerkleTreeConfig().setEnabled(false);
         cfg.addMapConfig(mapConfig);
 
         cfg.getMapConfig("testEntryView")
@@ -790,9 +794,9 @@ public class BasicMapTest extends HazelcastTestSupport {
         final String value = "value";
         map.lock(key);
 
-        Future f1 = spawn((Runnable) () -> assertFalse(map.tryPut(key, invalidValue, 1, SECONDS)));
+        Future<?> f1 = spawn((Runnable) () -> assertFalse(map.tryPut(key, invalidValue, 1, SECONDS)));
 
-        Future f2 = spawn((Runnable) () -> map.put(key, value));
+        Future<?> f2 = spawn((Runnable) () -> map.put(key, value));
 
         f1.get();
         try {
@@ -1364,6 +1368,7 @@ public class BasicMapTest extends HazelcastTestSupport {
 
     private static class StartsWithPredicate implements Predicate<Object, Object>, Serializable {
 
+        @Serial
         private static final long serialVersionUID = 4193947125511602220L;
 
         String pref;
@@ -1875,6 +1880,7 @@ public class BasicMapTest extends HazelcastTestSupport {
 
     private static class SampleEntryProcessor<K> implements EntryProcessor<K, Integer, Boolean>, Serializable {
 
+        @Serial
         private static final long serialVersionUID = -5735493325953375570L;
 
         @Override

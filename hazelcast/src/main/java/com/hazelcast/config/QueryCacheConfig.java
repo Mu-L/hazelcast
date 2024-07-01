@@ -21,6 +21,8 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -177,10 +179,8 @@ public class QueryCacheConfig implements IdentifiedDataSerializable {
      * @param name the name of {@code QueryCache}
      * @return this {@code QueryCacheConfig} instance
      */
-    public QueryCacheConfig setName(String name) {
-        checkHasText(name, "name");
-
-        this.name = name;
+    public QueryCacheConfig setName(@Nonnull String name) {
+        this.name = checkHasText(name, "name");
         return this;
     }
 
@@ -342,11 +342,11 @@ public class QueryCacheConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns {@code true} if coalescing is is enabled, otherwise returns {@code false}.
+     * Returns {@code true} if coalescing is enabled, otherwise returns {@code false}.
      * <p>
      * Default value is {@value #DEFAULT_COALESCE}.
      *
-     * @return {@code true} if coalescing is is enabled, otherwise returns {@code false}
+     * @return {@code true} if coalescing is enabled, otherwise returns {@code false}
      * @see #setCoalesce
      */
     public boolean isCoalesce() {
@@ -506,11 +506,9 @@ public class QueryCacheConfig implements IdentifiedDataSerializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof QueryCacheConfig)) {
+        if (!(o instanceof QueryCacheConfig that)) {
             return false;
         }
-
-        QueryCacheConfig that = (QueryCacheConfig) o;
 
         if (batchSize != that.batchSize) {
             return false;

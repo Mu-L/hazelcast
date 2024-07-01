@@ -63,7 +63,6 @@
             <plugin>
                 <groupId>com.googlecode.maven-download-plugin</groupId>
                 <artifactId>download-maven-plugin</artifactId>
-                <version>${maven.download.plugin.version}</version>
                 <executions>
                     <execution>
                         <id>download-datagen-zip-file</id>
@@ -200,7 +199,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>java-client</artifactId>
-            <version>3.6.2</version>
+            <version>3.7.0</version>
             <scope>test</scope>
         </dependency>
         <!-- Neo4J-->
@@ -212,7 +211,6 @@
         <dependency>
             <groupId>org.neo4j.driver</groupId>
             <artifactId>neo4j-java-driver</artifactId>
-            <version>5.20.0</version>
             <scope>test</scope>
         </dependency>
         <!-- Redis-->

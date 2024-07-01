@@ -20,6 +20,8 @@ import com.hazelcast.auditlog.AuditlogService;
 import com.hazelcast.auditlog.impl.NoOpAuditlogService;
 import com.hazelcast.cache.impl.CacheService;
 import com.hazelcast.cache.impl.ICacheService;
+import com.hazelcast.client.impl.ClientEngine;
+import com.hazelcast.client.impl.ClientEngineImpl;
 import com.hazelcast.client.impl.ClusterViewListenerService;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.config.AuditlogConfig;
@@ -86,6 +88,7 @@ import com.hazelcast.internal.networking.OutboundHandler;
 import com.hazelcast.internal.nio.ClassLoaderUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceBuilder;
+import com.hazelcast.internal.serialization.impl.CodebaseClusterVersionAware;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.internal.serialization.impl.compact.schema.MemberSchemaService;
 import com.hazelcast.internal.server.ServerConnection;
@@ -404,6 +407,8 @@ public class DefaultNodeExtension implements NodeExtension {
                     .setVersion(version)
                     .setSchemaService(node.getSchemaService())
                     .setNotActiveExceptionSupplier(HazelcastInstanceNotActiveException::new)
+                    .setVersionedSerializationEnabled(true)
+                    .setClusterVersionAware(new CodebaseClusterVersionAware())
                     .isCompatibility(isCompatibility)
                     .build();
         } catch (Exception e) {
@@ -728,5 +733,10 @@ public class DefaultNodeExtension implements NodeExtension {
     @Override
     public TpcServerBootstrap createTpcServerBootstrap() {
         return new TpcServerBootstrapImpl(node);
+    }
+
+    @Override
+    public ClientEngine createClientEngine() {
+        return new ClientEngineImpl(node);
     }
 }

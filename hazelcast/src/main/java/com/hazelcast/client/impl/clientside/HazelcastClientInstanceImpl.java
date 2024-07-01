@@ -46,13 +46,13 @@ import com.hazelcast.client.impl.spi.ClientListenerService;
 import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.client.impl.spi.ClientTransactionManagerService;
 import com.hazelcast.client.impl.spi.ProxyManager;
-import com.hazelcast.client.impl.spi.impl.ClientClusterServiceImpl;
 import com.hazelcast.client.impl.spi.impl.ClientExecutionServiceImpl;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.client.impl.spi.impl.ClientInvocationServiceImpl;
 import com.hazelcast.client.impl.spi.impl.ClientPartitionServiceImpl;
 import com.hazelcast.client.impl.spi.impl.ClientTransactionManagerServiceImpl;
 import com.hazelcast.client.impl.spi.impl.ClientUserCodeDeploymentService;
+import com.hazelcast.client.impl.spi.impl.listener.ClientCPGroupViewService;
 import com.hazelcast.client.impl.spi.impl.listener.ClientClusterViewListenerService;
 import com.hazelcast.client.impl.spi.impl.listener.ClientListenerServiceImpl;
 import com.hazelcast.client.impl.statistics.ClientStatisticsService;
@@ -186,7 +186,7 @@ public class HazelcastClientInstanceImpl implements HazelcastClientInstance, Ser
     private final ClientConfig config;
     private final LifecycleServiceImpl lifecycleService;
     private final TcpClientConnectionManager connectionManager;
-    private final ClientClusterServiceImpl clusterService;
+    private final ClientClusterService clusterService;
     private final ClientPartitionServiceImpl partitionService;
     private final ClientInvocationServiceImpl invocationService;
     private final ClientExecutionServiceImpl executionService;
@@ -214,8 +214,9 @@ public class HazelcastClientInstanceImpl implements HazelcastClientInstance, Ser
     private final ConcurrentLinkedQueue<Disposable> onClusterChangeDisposables = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<Disposable> onClientShutdownDisposables = new ConcurrentLinkedQueue<>();
     private final SqlClientService sqlService;
+    private final ClientCPGroupViewService cpGroupViewService;
 
-    @SuppressWarnings("ExecutableStatementCount")
+    @SuppressWarnings({"ExecutableStatementCount", "MethodLength"})
     public HazelcastClientInstanceImpl(String instanceName, ClientConfig clientConfig,
                                        ClientFailoverConfig clientFailoverConfig,
                                        ClientConnectionManagerFactory clientConnectionManagerFactory,
@@ -260,7 +261,8 @@ public class HazelcastClientInstanceImpl implements HazelcastClientInstance, Ser
         loadBalancer = initLoadBalancer(config);
         transactionManager = new ClientTransactionManagerServiceImpl(this);
         partitionService = new ClientPartitionServiceImpl(this);
-        clusterService = createClientClusterService();
+        clusterService = clientExtension.createClientClusterService(loggingService,
+                config.getNetworkConfig().getSubsetRoutingConfig());
         clusterDiscoveryService = initClusterDiscoveryService(externalAddressProvider);
         connectionManager = (TcpClientConnectionManager) clientConnectionManagerFactory.createConnectionManager(this);
         invocationService = new ClientInvocationServiceImpl(this);
@@ -277,11 +279,8 @@ public class HazelcastClientInstanceImpl implements HazelcastClientInstance, Ser
         cpSubsystem = clientExtension.createCPSubsystem(this);
         proxySessionManager = clientExtension.createProxySessionManager(this);
         sqlService = new SqlClientService(this);
-    }
-
-    private ClientClusterServiceImpl createClientClusterService() {
-        return new ClientClusterServiceImpl(loggingService,
-                config.getNetworkConfig().getSubsetRoutingConfig());
+        cpGroupViewService = clientExtension.createClientCPGroupViewService(this,
+                config.isCPDirectToLeaderRoutingEnabled());
     }
 
     private ConcurrencyDetection initConcurrencyDetection() {
@@ -386,6 +385,7 @@ public class HazelcastClientInstanceImpl implements HazelcastClientInstance, Ser
             Collection<EventListener> configuredListeners = instantiateConfiguredListenerObjects();
             clusterService.start(configuredListeners);
             clientClusterViewListenerService.start();
+            cpGroupViewService.start();
 
             // Add connection process listeners before starting the connection
             // manager, so that they are invoked for all connection attempts
@@ -969,5 +969,10 @@ public class HazelcastClientInstanceImpl implements HazelcastClientInstance, Ser
 
     public SchemaService getSchemaService() {
         return schemaService;
+    }
+
+    @Override
+    public ClientCPGroupViewService getCPGroupViewService() {
+        return cpGroupViewService;
     }
 }

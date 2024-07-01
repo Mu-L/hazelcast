@@ -17,6 +17,7 @@
 package com.hazelcast.internal.monitor.impl;
 
 import com.hazelcast.cache.impl.CacheStatisticsImpl;
+import com.hazelcast.client.impl.connection.tcp.RoutingMode;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.core.HazelcastInstance;
@@ -48,11 +49,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.hazelcast.config.HotRestartClusterDataRecoveryPolicy.FULL_RECOVERY_ONLY;
 import static com.hazelcast.test.Accessors.getHazelcastInstanceImpl;
 import static java.util.Collections.singleton;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -90,6 +93,7 @@ public class MemberStateImplTest extends HazelcastTestSupport {
         client.statsEnabled = true;
         client.name = "aClient";
         client.clusterConnectionTimestamp = connectionTimestamp;
+        client.routingMode = RoutingMode.SMART;
         client.labels = new HashSet<>(Collections.singletonList("label"));
         client.ipAddress = "10.176.167.34";
         client.canonicalHostName = "ip-10-176-167-34.ec2.internal";
@@ -129,6 +133,7 @@ public class MemberStateImplTest extends HazelcastTestSupport {
         memberState.setCachesWithStats(singleton("cache-1"));
         memberState.setFlakeIdGeneratorsWithStats(singleton("flakeIdGenerator-1"));
         memberState.setUserCodeNamespacesWithStats(singleton("userCodeNamespace-1"));
+        memberState.setVectorCollections(Set.of("vc-1", "vc-2"));
         memberState.setOperationStats(new LocalOperationStatsImpl());
         memberState.setClients(clients);
         memberState.setNodeState(state);
@@ -156,6 +161,8 @@ public class MemberStateImplTest extends HazelcastTestSupport {
         assertEquals(singleton("cache-1"), deserialized.getCachesWithStats());
         assertEquals(singleton("flakeIdGenerator-1"), deserialized.getFlakeIdGeneratorsWithStats());
         assertEquals(singleton("userCodeNamespace-1"), deserialized.getUserCodeNamespacesWithStats());
+        assertThat(deserialized.getVectorCollections())
+                .contains("vc-1", "vc-2");
         assertNotNull(deserialized.getOperationStats());
 
         client = deserialized.getClients().iterator().next();
@@ -165,6 +172,7 @@ public class MemberStateImplTest extends HazelcastTestSupport {
         assertTrue(client.enterprise);
         assertTrue(client.statsEnabled);
         assertEquals("aClient", client.name);
+        assertEquals(RoutingMode.SMART, client.routingMode);
         assertEquals(connectionTimestamp, client.clusterConnectionTimestamp);
         assertContains(client.labels, "label");
         assertEquals("10.176.167.34", client.ipAddress);

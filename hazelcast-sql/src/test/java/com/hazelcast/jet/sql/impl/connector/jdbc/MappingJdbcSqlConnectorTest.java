@@ -25,6 +25,7 @@ import com.hazelcast.sql.SqlColumnMetadata;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import com.hazelcast.sql.SqlRowMetadata;
+import com.hazelcast.test.Accessors;
 import com.hazelcast.test.jdbc.H2DatabaseProvider;
 import com.hazelcast.test.jdbc.JdbcObjectProvider;
 import com.hazelcast.test.jdbc.MySQLDatabaseProvider;
@@ -305,7 +306,7 @@ public class MappingJdbcSqlConnectorTest extends JdbcSqlTestSupport {
         options.put("jdbcUrl", dbConnectionUrl);
 
         createDataConnection(instance(), dcName, "JDBC", false, options);
-        InternalDataConnectionService dlService = getNodeEngineImpl(instance()).getDataConnectionService();
+        InternalDataConnectionService dlService = Accessors.getNodeEngineImpl(instance()).getDataConnectionService();
         assertThat(dlService.existsSqlDataConnection(dcName)).isTrue();
 
         createJdbcMappingUsingDataConnection(name, dcName);
@@ -323,7 +324,7 @@ public class MappingJdbcSqlConnectorTest extends JdbcSqlTestSupport {
     }
 
     /**
-     * Source : <a href=https://github.com/hazelcast/hazelcast/issues/24337">issue #24337</a>.
+     * Source : <a href="https://github.com/hazelcast/hazelcast/issues/24337">issue #24337</a>.
      */
     @Test
     public void given_mappingIsDeclaredWithDataConn_when_DataConnWasRemoved_then_success() throws Exception {

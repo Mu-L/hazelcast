@@ -73,7 +73,7 @@
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-storage</artifactId>
-            <version>v1-rev20240319-2.0.0</version>
+            <version>v1-rev20240621-2.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.threeten</groupId>
@@ -83,7 +83,6 @@
         <dependency>
             <groupId>com.google.api</groupId>
             <artifactId>api-common</artifactId>
-            <version>2.30.0</version>
         </dependency>
         <dependency>
             <groupId>io.opencensus</groupId>

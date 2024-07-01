@@ -97,8 +97,6 @@
             --add-opens jdk.management/com.sun.management.internal=${hazelcast.module.name}
             --add-opens java.base/sun.nio.ch=${hazelcast.module.name}
             --add-opens java.base/java.lang=${hazelcast.module.name}
-            --add-opens java.base/java.lang.reflect=${hazelcast.module.name}
-            --add-opens java.base/java.util=${hazelcast.module.name}
             --add-opens java.management/sun.management=${hazelcast.module.name}
         </javaStandardModuleArgs>
         <javaModuleArgs>${javaStandardModuleArgs}</javaModuleArgs>
@@ -191,59 +189,6 @@
         </testResources>
 
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>${maven.checkstyle.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>checkstyle</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <configLocation>${checkstyle.configLocation}</configLocation>
-                    <suppressionsLocation>${checkstyle.supressionsLocation}</suppressionsLocation>
-                    <headerLocation>${checkstyle.headerLocation}</headerLocation>
-                    <linkXRef>false</linkXRef>
-                    <consoleOutput>true</consoleOutput>
-                    <failsOnError>true</failsOnError>
-                    <failOnViolation>true</failOnViolation>
-                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
-                    <enableRulesSummary>true</enableRulesSummary>
-                    <propertyExpansion>main.basedir=${main.basedir}</propertyExpansion>
-                    <excludes>**/module-info.java</excludes>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven.compiler.plugin.version}</version>
-                <configuration>
-                    <release>${jdk.version}</release>
-                    <encoding>${project.build.sourceEncoding}</encoding>
-                    <!--
-                    Workaround for compilation failure on Windows in hazelcast-sql module:
-                    Compilation failure
-                    org.immutables.value.internal.$processor$.$Processor threw com.sun.tools.javac.jvm.ClassReader$BadClassFile: bad class file: hazelcast\target\hazelcast-5.2-SNAPSHOT.jar(com/hazelcast/jet/package-info.class)
-                    class file contains wrong class: com\hazelcast\jet\package-info
-                    Please remove or make sure it appears in the correct subdirectory of the classpath.
-                    -->
-                    <excludes>
-                        <exclude>**/package-info.java</exclude>
-                    </excludes>
-                    <testExcludes>
-                        <exclude>**/package-info.java</exclude>
-                    </testExcludes>
-                    <compilerArgs>
-                        <arg>-Xlint:-deprecation,-removal</arg>
-                    </compilerArgs>
-                </configuration>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -367,13 +312,6 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>${dependency.check.maven.plugin.version}</version>
-                <configuration>
-                    <format>ALL</format>
-                    <skipProvidedScope>true</skipProvidedScope>
-                    <nodeAuditAnalyzerEnabled>false</nodeAuditAnalyzerEnabled>
-                    <suppressionFiles>owasp-check-suppressions.xml</suppressionFiles>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -411,7 +349,7 @@
                 <artifactId>attribution-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>aggregated-attribution</id>
+                        <id>aggregated-attribution-oss</id>
                         <inherited>false</inherited>
                         <goals>
                             <goal>aggregate</goal>
@@ -427,7 +365,18 @@
 
     <profiles>
         <profile>
-            <!-- used by the PR builder -->
+            <!--
+            Executes:
+            - `ParallelJVMTest`s in parallel via several surefire forks (note: inside the fork tests still run serially)
+            - Excludes:
+                - `SlowTest`
+                - `NightlyTest`
+            - Typically `QuickTest`s
+
+            Duplicated in OS & EE
+
+            used by the PR builder
+            -->
             <id>parallelTest</id>
             <properties>
                 <skip-singlejvm-tests>false</skip-singlejvm-tests>
@@ -561,6 +510,9 @@
         </profile>
 
         <profile>
+            <!--
+            Configures execution to optimize runtime of the PR builder, by excluding tasks not required for build validation (e.g., shading)
+            -->
             <id>pr-builder</id>
             <build>
                 <plugins>
@@ -626,7 +578,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>cobertura-maven-plugin</artifactId>
-                        <version>${cobertura.maven.plugin.version}</version>
                         <configuration>
                             <instrumentation>
                                 <ignores/>
@@ -675,7 +626,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>cobertura-maven-plugin</artifactId>
-                        <version>${cobertura.maven.plugin.version}</version>
                     </plugin>
                 </plugins>
             </reporting>
@@ -703,7 +653,6 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>${jacoco.maven.plugin.version}</version>
                         <configuration>
                             <excludes>
                                 <exclude>**DummyProperty**</exclude>
@@ -781,42 +730,16 @@
         </profile>
 
         <profile>
+            <!--
+            Configures release-specific options when doing a final, production release
+            -->
             <id>release</id>
-            <properties>
-                <javadoc>true</javadoc>
-            </properties>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${maven.gpg.plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                        <configuration>
-                            <gpgArguments>
-                                <gpgArgument>--pinentry-mode</gpgArgument>
-                                <gpgArgument>loopback</gpgArgument>
-                            </gpgArguments>
-                        </configuration>
-                    </plugin>
-
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
-
-                    <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.6.13</version>
+                        <version>1.7.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <serverId>release-repository</serverId>
@@ -828,44 +751,17 @@
             </build>
         </profile>
 
-        <!-- unfortunately it isn't possible to chain profiles, so we need to duplicate the javadoc plugin -->
         <profile>
-            <id>release-snapshot</id>
-            <properties>
-                <javadoc>true</javadoc>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
+            <!--
+            Executes:
+            - `SlowTest`s
+            - `NightlyTest`s
+            - Excludes all other tests
 
-        <profile>
-            <id>release-devel</id>
-            <properties>
-                <javadoc>true</javadoc>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-javadoc-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-            <distributionManagement>
-                <repository>
-                    <id>devel-repository</id>
-                    <url>https://hazelcast.jfrog.io/artifactory/devel</url>
-                </repository>
-            </distributionManagement>
-        </profile>
+            Duplicated in OS & EE
 
-        <profile>
+            Used for scheduled, longer running tests
+            -->
             <id>nightly-build</id>
             <build>
                 <plugins>
@@ -939,6 +835,11 @@
         </profile>
 
         <profile>
+            <!--
+            Executes all tests (`QuickTest` and `SlowTest`)
+
+            Duplicated in OS & EE
+            -->
             <id>all-tests</id>
             <build>
                 <plugins>
@@ -1080,6 +981,13 @@
         </profile>
 
         <profile>
+            <!--
+            In isolation, does nothing as typically enabled by default
+            Works in conjunction with the `-Dquick` argument - which disables this profile - allowing additional modules to be skipped to reduce build time
+            This implementation is preferred as it also supports excluding child modules
+
+            Duplicated in OS & EE
+            -->
             <id>not-quick</id>
             <activation>
                 <property>
@@ -1263,8 +1171,8 @@
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>annotations</artifactId>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>

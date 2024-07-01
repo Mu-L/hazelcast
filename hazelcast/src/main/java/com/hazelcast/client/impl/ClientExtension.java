@@ -17,8 +17,12 @@
 package com.hazelcast.client.impl;
 
 import com.hazelcast.client.config.SocketOptions;
+import com.hazelcast.client.config.SubsetRoutingConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.spi.ClientClusterService;
 import com.hazelcast.client.impl.spi.ClientProxyFactory;
+import com.hazelcast.client.impl.spi.impl.listener.ClientCPGroupViewService;
+import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.SSLConfig;
 import com.hazelcast.config.SocketInterceptorConfig;
 import com.hazelcast.cp.CPSubsystem;
@@ -27,6 +31,7 @@ import com.hazelcast.internal.nearcache.NearCacheManager;
 import com.hazelcast.internal.networking.ChannelInitializer;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetService;
+import com.hazelcast.logging.LoggingService;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.internal.memory.MemoryStats;
 import com.hazelcast.nio.SocketInterceptor;
@@ -121,4 +126,23 @@ public interface ClientExtension {
     CPSubsystem createCPSubsystem(HazelcastClientInstanceImpl hazelcastClientInstance);
 
     ProxySessionManager createProxySessionManager(HazelcastClientInstanceImpl hazelcastClientInstance);
+
+    /**
+     * Creates the relevant ClientClusterService implementation.
+     *
+     * @param hazelcastClientInstance the client instance.
+     * @return the ClientClusterService implementation.
+     * @throws InvalidConfigurationException if the service cannot be created due to an invalid configuration.
+     */
+    ClientClusterService createClientClusterService(LoggingService loggingService,
+                                                    SubsetRoutingConfig subsetRoutingConfig);
+
+    /**
+     * Creates the correct implementation of {@link ClientCPGroupViewService}.
+     *
+     * @param hazelcastClientInstance the client instance
+     * @return the concrete {@link ClientCPGroupViewService} implementation.
+     */
+    ClientCPGroupViewService createClientCPGroupViewService(HazelcastClientInstanceImpl hazelcastClientInstance,
+                                                            boolean directToLeaderRoutingEnabled);
 }

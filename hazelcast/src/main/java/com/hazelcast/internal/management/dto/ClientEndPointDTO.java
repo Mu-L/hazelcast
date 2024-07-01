@@ -17,6 +17,7 @@
 package com.hazelcast.internal.management.dto;
 
 import com.hazelcast.client.impl.ClientEndpoint;
+import com.hazelcast.client.impl.connection.tcp.RoutingMode;
 import com.hazelcast.internal.json.Json;
 import com.hazelcast.internal.json.JsonArray;
 import com.hazelcast.internal.json.JsonObject;
@@ -31,6 +32,7 @@ import java.util.UUID;
 
 import static com.hazelcast.internal.util.JsonUtil.getArray;
 import static com.hazelcast.internal.util.JsonUtil.getBoolean;
+import static com.hazelcast.internal.util.JsonUtil.getInt;
 import static com.hazelcast.internal.util.JsonUtil.getLong;
 import static com.hazelcast.internal.util.JsonUtil.getString;
 
@@ -52,6 +54,7 @@ public class ClientEndPointDTO implements JsonSerializable {
     public boolean statsEnabled;
     public String name;
     public long clusterConnectionTimestamp;
+    public RoutingMode routingMode;
     public Set<String> labels;
 
     /**
@@ -64,6 +67,11 @@ public class ClientEndPointDTO implements JsonSerializable {
      */
     public String canonicalHostName;
 
+    /**
+     * Whether the Client has cp direct-to-leader operation routing enabled (requires member-side license components)
+     */
+    public boolean cpDirectToLeader;
+
     public ClientEndPointDTO() {
     }
 
@@ -75,6 +83,7 @@ public class ClientEndPointDTO implements JsonSerializable {
         this.statsEnabled = clientEndpoint.getClientStatistics() != null;
         this.name = clientEndpoint.getName();
         this.clusterConnectionTimestamp = clientEndpoint.getConnectionStartTime();
+        this.routingMode = clientEndpoint.getRoutingMode();
         this.labels = clientEndpoint.getLabels();
 
         InetSocketAddress socketAddress = clientEndpoint.getSocketAddress();
@@ -83,6 +92,7 @@ public class ClientEndPointDTO implements JsonSerializable {
         InetAddress address = socketAddress.getAddress();
         this.ipAddress = address != null ? address.getHostAddress() : null;
         this.canonicalHostName = address != null ? address.getCanonicalHostName() : null;
+        this.cpDirectToLeader = clientEndpoint.isCpDirectToLeaderEnabled();
     }
 
     @Override
@@ -100,9 +110,11 @@ public class ClientEndPointDTO implements JsonSerializable {
             labelsObject.add(label);
         }
         root.add("clusterConnectionTimestamp", clusterConnectionTimestamp);
+        root.add("routingMode", routingMode.getId());
         root.add("labels", labelsObject);
         root.add("ipAddress", ipAddress);
         root.add("canonicalHostName", canonicalHostName);
+        root.add("cpDirectToLeader", cpDirectToLeader);
         return root;
     }
 
@@ -114,6 +126,7 @@ public class ClientEndPointDTO implements JsonSerializable {
         clientVersion = getString(json, "clientVersion");
         enterprise = getBoolean(json, "enterprise");
         statsEnabled = getBoolean(json, "statsEnabled");
+        routingMode = RoutingMode.getById(getInt(json, "routingMode", -1));
         name = getString(json, "name");
         clusterConnectionTimestamp = getLong(json, "clusterConnectionTimestamp");
         JsonArray labelsArray = getArray(json, "labels");
@@ -123,5 +136,6 @@ public class ClientEndPointDTO implements JsonSerializable {
         }
         ipAddress = getString(json, "ipAddress", null);
         canonicalHostName = getString(json, "canonicalHostName", null);
+        cpDirectToLeader = getBoolean(json, "cpDirectToLeader", false);
     }
 }

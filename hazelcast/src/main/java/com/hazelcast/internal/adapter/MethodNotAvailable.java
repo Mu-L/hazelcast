@@ -23,8 +23,8 @@ import java.lang.annotation.Target;
 
 /**
  * Marks methods which are not available in a
- * {@llink DataStructureAdapter} implementation.
- *
+ * {@link DataStructureAdapter} implementation.
+ * <p>
  * This annotation can be used to automatically skip
  * tests which require a specific method to be available.
  */

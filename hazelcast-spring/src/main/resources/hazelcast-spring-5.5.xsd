@@ -1763,6 +1763,7 @@
                     <xs:element name="native-memory" type="native-memory" minOccurs="0"/>
                     <xs:element name="sql" type="clientSql" minOccurs="0"/>
                     <xs:element name="tpc" type="tpc-client" minOccurs="0"/>
+                    <xs:element name="cp-direct-to-leader-routing" type="xs:boolean" minOccurs="0" default="false"/>
                 </xs:choice>
             </xs:extension>
         </xs:complexContent>
@@ -3124,6 +3125,8 @@
                         <xs:element name="sql-permission" type="instance-permission" minOccurs="0"
                                     maxOccurs="unbounded"/>
                         <xs:element name="user-code-namespace-permission" type="instance-permission" minOccurs="0"
+                                    maxOccurs="unbounded"/>
+                        <xs:element name="vector-collection-permission" type="instance-permission" minOccurs="0"
                                     maxOccurs="unbounded"/>
                     </xs:choice>
                     <xs:attribute name="on-join-operation" type="permission-on-join-operation" default="RECEIVE"/>

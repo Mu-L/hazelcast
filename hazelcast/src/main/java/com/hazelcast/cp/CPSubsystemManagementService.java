@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
  * and its majority value is recalculated. Please note that this behaviour is
  * when CP Subsystem Persistence is disabled. When CP Subsystem Persistence is
  * enabled, shut-down CP members are not automatically removed from the active
- * CP members list and they are still considered as part of CP groups
+ * CP members list, and they are still considered as part of CP groups
  * and majority calculations, because they can come back by restoring their
  * local CP state from stable storage. If you know that a shut-down CP member
  * will not be restarted, you need to remove that member from CP Subsystem via
@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit;
  * A new CP member can be added to CP Subsystem to either increase the number
  * of available CP members for new CP groups or to fill the missing slots in
  * existing CP groups. After the initial Hazelcast cluster startup is done,
- * an existing Hazelcast member can be be promoted to the CP member role. This
+ * an existing Hazelcast member can be promoted to the CP member role. This
  * new CP member automatically joins to CP groups that have missing members,
  * and majority values of these CP groups are recalculated.
  *
@@ -260,4 +260,14 @@ public interface CPSubsystemManagementService {
      * @see #isDiscoveryCompleted()
      */
     boolean awaitUntilDiscoveryCompleted(long timeout, TimeUnit timeUnit) throws InterruptedException;
+
+    /**
+     * Creates a {@link CPGroupsSnapshot} based on the internal
+     * CP group view tracker's current view of all groups. This
+     * snapshot will always be empty if the ADVANCED_CP license
+     * component is not present.
+     *
+     * @return a new {@link CPGroupsSnapshot}
+     */
+    CPGroupsSnapshot getCurrentGroupsSnapshot();
 }

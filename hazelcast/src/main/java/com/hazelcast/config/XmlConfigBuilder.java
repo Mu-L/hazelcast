@@ -41,7 +41,7 @@ import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.internal.util.XmlUtil.getNsAwareDocumentBuilderFactory;
 
 /**
- * A XML {@link ConfigBuilder} implementation.
+ * An XML {@link ConfigBuilder} implementation.
  * <p>
  * Unlike {@link Config#load()} and its variants, a configuration constructed via
  * {@code XmlConfigBuilder} does not apply overrides found in environment variables/system properties.
@@ -210,5 +210,9 @@ public class XmlConfigBuilder extends AbstractXmlConfigBuilder implements Config
             IOUtil.closeResource(is);
         }
         return doc;
+    }
+
+    protected InputStream getInputStream() {
+        return in;
     }
 }

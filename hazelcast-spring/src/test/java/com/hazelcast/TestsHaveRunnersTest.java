@@ -14,24 +14,21 @@
  * limitations under the License.
  */
 
-package com.hazelcast.nio.ssl;
+package com.hazelcast;
 
-import java.util.Properties;
+import com.hazelcast.test.archunit.ArchUnitRules;
+import com.hazelcast.test.archunit.ArchUnitTestSupport;
+import com.hazelcast.test.archunit.ModuleImportOptions;
+import com.tngtech.archunit.core.domain.JavaClasses;
+import org.junit.Test;
 
-import javax.net.ssl.SSLContext;
+public class TestsHaveRunnersTest extends ArchUnitTestSupport {
 
-/**
- * Empty implementation. The real one is part of hazelcast-enterprise.
- */
-public class BasicSSLContextFactory implements SSLContextFactory {
+    @Test
+    public void testHaveRunners() {
+        String basePackage = "com.hazelcast";
+        JavaClasses classes = ModuleImportOptions.getCurrentModuleTestClasses(basePackage);
 
-    @Override
-    public void init(Properties properties) throws Exception {
+        ArchUnitRules.TESTS_HAVE_RUNNNERS.check(classes);
     }
-
-    @Override
-    public SSLContext getSSLContext() {
-        return null;
-    }
-
 }

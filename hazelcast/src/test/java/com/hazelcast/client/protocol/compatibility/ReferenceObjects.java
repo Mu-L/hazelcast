@@ -71,6 +71,7 @@ import com.hazelcast.cp.CPGroupId;
 import com.hazelcast.cp.CPMember;
 import com.hazelcast.cp.internal.CPMemberInfo;
 import com.hazelcast.cp.internal.RaftGroupId;
+import com.hazelcast.cp.internal.RaftGroupInfo;
 import com.hazelcast.instance.EndpointQualifier;
 import com.hazelcast.instance.ProtocolType;
 import com.hazelcast.internal.cluster.MemberInfo;
@@ -100,6 +101,7 @@ import com.hazelcast.sql.impl.client.SqlPage;
 import com.hazelcast.transaction.impl.xa.SerializableXID;
 import com.hazelcast.vector.SearchOptions;
 import com.hazelcast.vector.SearchOptionsBuilder;
+import com.hazelcast.vector.SearchResult;
 import com.hazelcast.vector.VectorValues;
 import com.hazelcast.vector.impl.DataSearchResult;
 import com.hazelcast.vector.impl.DataVectorDocument;
@@ -807,7 +809,10 @@ public class ReferenceObjects {
     }
 
     public static RaftGroupId aRaftGroupId = new RaftGroupId(aString, aLong, aLong);
+    public static RaftGroupInfo aRaftGroupInfo = new RaftGroupInfo(aRaftGroupId, aCpMember, aListOfCpMembers);
     public static List<RaftGroupId> aListOfRaftGroupIds = Collections.singletonList(aRaftGroupId);
+    public static List<RaftGroupInfo> aListOfRaftGroupInfo = Collections.singletonList(aRaftGroupInfo);
+    public static Map<RaftGroupId, Collection<UUID>> aMapOfRaftGroupIdToListUuid = Collections.singletonMap(aRaftGroupId, aListOfUUIDs);
     public static ScheduledTaskHandler aScheduledTaskHandler = new ScheduledTaskHandlerImpl(aUUID, anInt, aString, aString);
     public static SimpleEntryView<Data, Data> aSimpleEntryView = new SimpleEntryView<>(aData, aData);
     public static ReplicatedMapEntryViewHolder aReplicatedMapEntryViewHolder = new ReplicatedMapEntryViewHolder(
@@ -1066,7 +1071,7 @@ public class ReferenceObjects {
             .limit(100)
             .hint(aString, aString)
             .build();
-    public static List<DataSearchResult> aList_VectorSearchResult = List.of(new DataSearchResult(aData, aData, aFloat, aVectorValues));
+    public static List<SearchResult<Data, Data>> aList_VectorSearchResult = List.of(new DataSearchResult(aData, aData, aFloat, aVectorValues));
 
     public static Version aVersion = CustomTypeFactory.createVersion(aByte, aByte);
 }

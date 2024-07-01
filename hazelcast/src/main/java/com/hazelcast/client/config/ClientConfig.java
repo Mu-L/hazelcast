@@ -120,6 +120,7 @@ public class ClientConfig {
     private InstanceTrackingConfig instanceTrackingConfig = new InstanceTrackingConfig();
     private ClientSqlConfig sqlConfig = new ClientSqlConfig();
     private ClientTpcConfig tpcConfig = new ClientTpcConfig();
+    private boolean cpDirectToLeaderRoutingEnabled;
 
     public ClientConfig() {
         listenerConfigs = new LinkedList<>();
@@ -192,7 +193,7 @@ public class ClientConfig {
      * <p>
      * It tries to load Hazelcast Client configuration from a list of well-known locations,
      * and then applies overrides found in environment variables/system properties
-     *
+     * <p>
      * When no location contains Hazelcast Client configuration then it returns default.
      * <p>
      * Note that the same mechanism is used when calling
@@ -232,7 +233,7 @@ public class ClientConfig {
     /**
      * Sets the pattern matcher which is used to match item names to
      * configuration objects.
-     * By default the {@link MatchingPointConfigPatternMatcher} is used.
+     * By default, the {@link MatchingPointConfigPatternMatcher} is used.
      *
      * @param configPatternMatcher the pattern matcher
      * @return this configuration
@@ -247,7 +248,7 @@ public class ClientConfig {
     /**
      * Returns the pattern matcher which is used to match item names to
      * configuration objects.
-     * By default the {@link MatchingPointConfigPatternMatcher} is used.
+     * By default, the {@link MatchingPointConfigPatternMatcher} is used.
      *
      * @return the pattern matcher
      */
@@ -497,7 +498,7 @@ public class ClientConfig {
      * Returns the {@link ClientFlakeIdGeneratorConfig} for the given name, creating
      * one if necessary and adding it to the collection of known configurations.
      * <p>
-     * The configuration is found by matching the the configuration name
+     * The configuration is found by matching the configuration name
      * pattern to the provided {@code name} without the partition qualifier
      * (the part of the name after {@code '@'}).
      * If no configuration matches, it will create one by cloning the
@@ -1037,13 +1038,37 @@ public class ClientConfig {
         return this;
     }
 
+    /**
+     * Returns whether CP direct-to-leader operation sending is enabled for this client.
+     * This functionality requires Hazelcast Enterprise license components.
+     * The default setting is {@code false}.
+     *
+     * @return {@code true} if CP direct-to-leader operation sending is enabled, otherwise {@code false}
+     * @since 5.5
+     */
+    public boolean isCPDirectToLeaderRoutingEnabled() {
+        return this.cpDirectToLeaderRoutingEnabled;
+    }
+
+    /**
+     * Sets whether CP direct-to-leader operation sending is enabled.
+     * See {@link #isCPDirectToLeaderRoutingEnabled()}.
+     *
+     * @param cpDirectToLeaderRoutingEnabled the boolean value to set
+     * @since 5.5
+     */
+    public void setCPDirectToLeaderRoutingEnabled(boolean cpDirectToLeaderRoutingEnabled) {
+        this.cpDirectToLeaderRoutingEnabled = cpDirectToLeaderRoutingEnabled;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(backupAckToClientEnabled, classLoader, clusterName, configPatternMatcher, connectionStrategyConfig,
                 flakeIdGeneratorConfigMap, instanceName, labels, listenerConfigs, loadBalancer, loadBalancerClassName,
                 managedContext, metricsConfig, nativeMemoryConfig, nearCacheConfigMap, networkConfig, properties,
                 proxyFactoryConfigs, queryCacheConfigs, reliableTopicConfigMap, securityConfig, serializationConfig,
-                userCodeDeploymentConfig, userContext, instanceTrackingConfig, sqlConfig, tpcConfig);
+                userCodeDeploymentConfig, userContext, instanceTrackingConfig, sqlConfig, tpcConfig,
+                cpDirectToLeaderRoutingEnabled);
     }
 
     @Override
@@ -1080,7 +1105,8 @@ public class ClientConfig {
                 && Objects.equals(userContext, other.userContext)
                 && Objects.equals(instanceTrackingConfig, other.instanceTrackingConfig)
                 && Objects.equals(sqlConfig, other.sqlConfig)
-                && Objects.equals(tpcConfig, other.tpcConfig);
+                && Objects.equals(tpcConfig, other.tpcConfig)
+                && Objects.equals(cpDirectToLeaderRoutingEnabled, other.cpDirectToLeaderRoutingEnabled);
     }
 
     @Override
@@ -1110,6 +1136,7 @@ public class ClientConfig {
                 + ", instanceTrackingConfig=" + instanceTrackingConfig
                 + ", sqlConfig=" + sqlConfig
                 + ", tpcConfig=" + tpcConfig
+                + ", cpDirectToLeaderRoutingEnabled=" + cpDirectToLeaderRoutingEnabled
                 + '}';
     }
 }

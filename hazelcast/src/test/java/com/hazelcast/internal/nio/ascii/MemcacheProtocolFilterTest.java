@@ -41,7 +41,7 @@ public class MemcacheProtocolFilterTest extends AbstractTextProtocolsTestBase {
     /**
      * <pre>
      * Given: Memcache protocol is explicitly disabled
-     * When: version commad prefix (ver) is used by client
+     * When: version command prefix (ver) is used by client
      * Then: connection is terminated after reading the first 3 bytes (protocol header)
      * </pre>
      */
@@ -50,39 +50,33 @@ public class MemcacheProtocolFilterTest extends AbstractTextProtocolsTestBase {
         Config config = new Config();
         config.getNetworkConfig().setMemcacheProtocolConfig(new MemcacheProtocolConfig().setEnabled(false));
         HazelcastInstance hz = factory.newHazelcastInstance(config);
-        TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress());
-        try {
+        try (TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress())) {
             client.connect();
             client.sendData("ver");
             client.waitUntilClosed();
             assertEquals(3, client.getSentBytesCount());
             assertEquals(0, client.getReceivedBytes().length);
             assertTrue(client.isConnectionClosed());
-        } finally {
-            client.close();
         }
     }
 
     /**
      * <pre>
      * Given: Memcache protocol config is not provided (default is used)
-     * When: version commad prefix (ver) is used by client
+     * When: version command prefix (ver) is used by client
      * Then: connection is terminated after reading the first 3 bytes (protocol header)
      * </pre>
      */
     @Test
     public void testMemcacheDisabledByDefault() throws Exception {
         HazelcastInstance hz = factory.newHazelcastInstance(null);
-        TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress());
-        try {
+        try (TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress())) {
             client.connect();
             client.sendData("ver");
             client.waitUntilClosed();
             assertEquals(3, client.getSentBytesCount());
             assertEquals(0, client.getReceivedBytes().length);
             assertTrue(client.isConnectionClosed());
-        } finally {
-            client.close();
         }
     }
 
@@ -98,16 +92,13 @@ public class MemcacheProtocolFilterTest extends AbstractTextProtocolsTestBase {
         Config config = new Config();
         config.getNetworkConfig().setMemcacheProtocolConfig(new MemcacheProtocolConfig().setEnabled(true));
         HazelcastInstance hz = factory.newHazelcastInstance(config);
-        TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress());
-        try {
+        try (TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress())) {
             client.connect();
             client.sendData("GET");
             client.waitUntilClosed();
             assertEquals(3, client.getSentBytesCount());
             assertEquals(0, client.getReceivedBytes().length);
             assertTrue(client.isConnectionClosed());
-        } finally {
-            client.close();
         }
     }
 
@@ -123,13 +114,10 @@ public class MemcacheProtocolFilterTest extends AbstractTextProtocolsTestBase {
         Config config = new Config();
         config.getNetworkConfig().setMemcacheProtocolConfig(new MemcacheProtocolConfig().setEnabled(true));
         HazelcastInstance hz = factory.newHazelcastInstance(config);
-        TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress());
-        try {
+        try (TextProtocolClient client = new TextProtocolClient(getAddress(hz).getInetSocketAddress())) {
             client.connect();
             client.sendData("version\n");
             assertTrueEventually(createResponseAssertTask("Version expected", client, "VERSION Hazelcast"), 10);
-        } finally {
-            client.close();
         }
     }
 }

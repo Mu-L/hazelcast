@@ -166,7 +166,7 @@ public class HotRestartPersistenceConfig {
      * Sets the number of Hot Restart store instances to create for one Hazelcast instance.
      */
     public HotRestartPersistenceConfig setParallelism(int parallelism) {
-        checkPositive(parallelism, "Palallelism must be a positive integer");
+        checkPositive(parallelism, "Parallelism must be a positive integer");
         this.parallelism = parallelism;
         return this;
     }
@@ -217,22 +217,22 @@ public class HotRestartPersistenceConfig {
     }
 
     /**
-     * Returns whether or not automatically removal of stale Hot Restart data is enabled.
+     * Returns whether automatic removal of stale Hot Restart data is enabled.
      *
-     * @return whether or not automatically removal of stale data is enabled
+     * @return whether automatic removal of stale data is enabled
      */
     public boolean isAutoRemoveStaleData() {
         return autoRemoveStaleData;
     }
 
     /**
-     * Sets whether or not automatically removal of stale Hot Restart data is enabled.
+     * Sets whether automatic removal of stale Hot Restart data is enabled.
      * <p>
      * When a member terminates or crashes when cluster state is {@link com.hazelcast.cluster.ClusterState#ACTIVE},
      * remaining members redistributes data among themselves and data persisted on terminated member's storage becomes
      * stale. That terminated member cannot rejoin the cluster without removing Hot Restart data.
      * When auto-removal of stale Hot Restart data is enabled, while restarting that member, Hot Restart data is
-     * automatically removed and it joins the cluster as a completely new member.
+     * automatically removed, and it joins the cluster as a completely new member.
      * Otherwise, Hot Restart data should be removed manually.
      *
      * @param autoRemoveStaleData {@code true} to enable auto-removal of stale data, {@code false} otherwise
@@ -268,11 +268,10 @@ public class HotRestartPersistenceConfig {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof HotRestartPersistenceConfig)) {
+        if (!(o instanceof HotRestartPersistenceConfig that)) {
             return false;
         }
 
-        HotRestartPersistenceConfig that = (HotRestartPersistenceConfig) o;
         if (enabled != that.enabled) {
             return false;
         }

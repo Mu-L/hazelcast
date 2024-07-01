@@ -248,6 +248,11 @@
         },
         "tpc": {
           "$ref": "#/definitions/ClientTpc"
+        },
+        "cp-direct-to-leader-routing": {
+          "type": "boolean",
+          "default": false,
+          "description": "The cp-direct-to-leader-routing element lets you enable/disable direct-to-leader routing behaviour. This feature allows CP data structure operations to be sent directly to group leaders instead of using all members of the cluster. This functionality requires the cluster to have the appropriate Hazelcast Enterprise license, otherwise it will provide no benefit on the client. It is disabled by default. This option has no effect for unisocket clients."
         }
       }
     },
@@ -3000,7 +3005,8 @@
               "connector",
               "sql",
               "cpmap",
-              "user-code-namespace"
+              "user-code-namespace",
+              "vector-collection"
             ]
           },
           "properties": {
@@ -3095,6 +3101,7 @@
         "aggregate",
         "projection",
         "deploy",
+        "optimize",
         "submit",
         "cancel",
         "restart",
@@ -4185,6 +4192,10 @@
                   "type": "string",
                   "description": "Sets the cluster name used as an endpoint cluster name for authentication on the target endpoint. If there is no separate publisher ID property defined, this cluster name will also be used as a WAN publisher ID. This ID is then used for identifying the publisher in a WanReplicationConfig."
                 },
+                "publisher-id": {
+                  "type": "string",
+                  "description": "Sets the publisher ID used for identifying the publisher in a WanReplicationConfig. If there is no publisher ID defined (it is empty), the cluster name will be used as a publisher ID."
+                },
                 "batch-size": {
                   "type": "integer",
                   "default": 500,
@@ -5231,6 +5242,16 @@
           "$ref": "#/definitions/JavaSerializationFilter",
           "description":
           "Allows to configure blacklisting and whitelisting by class, package or prefix.\nIf a filtered class has been blacklisted, a SecurityException will be thrown.\nIf whitelisting is enabled, either by explicit declaration under whitelist or setting defaults-disabled=false, a SecurityException will be thrown if a filtered class has not been whitelisted.\nIf defaults-disabled is set to true, the default whitelist will not be used.\nIf set to false, the default whitelist will be used. In such cases that a class name does not match any of the whitelisted classes, packages or prefixes, a SecurityException will be thrown."
+        },
+        "name-spaces": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Namespace"
+            }
+          },
+          "description": "A list of User Code Namespace configurations."
         }
       },
       "additionalProperties": {

@@ -17,6 +17,7 @@
 package com.hazelcast.instance.impl;
 
 import com.hazelcast.auditlog.AuditlogService;
+import com.hazelcast.client.impl.ClientEngine;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.config.SSLConfig;
 import com.hazelcast.cp.CPSubsystem;
@@ -244,7 +245,7 @@ public interface NodeExtension {
      * Creates additional extension services, which will be registered by
      * service manager during start-up.
      *
-     * By default returned map will be empty.
+     * By default, returned map will be empty.
      *
      * @return extension services
      */
@@ -331,7 +332,7 @@ public interface NodeExtension {
     void onClusterStateChange(ClusterState newState, boolean isTransient);
 
     /**
-     * Called synchronously when partition state (partition assignments, version etc) changes
+     * Called synchronously when partition state (partition assignments, version etc.) changes
      */
     void onPartitionStateChange();
 
@@ -426,6 +427,13 @@ public interface NodeExtension {
     UserCodeNamespaceService getNamespaceService();
 
     TpcServerBootstrap createTpcServerBootstrap();
+
+    /**
+     * Creates an implementation of the {@link ClientEngine} depending on Hazelcast edition.
+     *
+     * @return a new {@link ClientEngine} instance for this member
+     */
+    ClientEngine createClientEngine();
 
     /**
      * @return the license object, if a Hazelcast Enterprise license is configured, otherwise {@code null}

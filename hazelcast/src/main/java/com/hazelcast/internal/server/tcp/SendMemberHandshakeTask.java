@@ -82,12 +82,30 @@ public class SendMemberHandshakeTask implements Runnable {
     }
 
     Map<ProtocolType, Collection<Address>> getConfiguredLocalAddresses() {
+        EndpointQualifier qualifier = connection.getConnectionManager().getEndpointQualifier();
+        boolean isWanHandshake = qualifier != null && qualifier.getType().equals(ProtocolType.WAN);
+
         Map<ProtocolType, Collection<Address>> addressMap = new HashMap<>();
+        populateAddressMap(addressMap, isWanHandshake);
+
+        // If this is a WAN handshake and no WAN-specific interfaces are available, fallback to the standard address map
+        if (addressMap.isEmpty() && isWanHandshake) {
+            populateAddressMap(addressMap, false);
+        }
+        return addressMap;
+    }
+
+    private void populateAddressMap(Map<ProtocolType, Collection<Address>> addressMap, boolean isWanHandshake) {
         Map<EndpointQualifier, Address> addressesPerEndpointQualifier = serverContext.getThisAddresses();
         for (Map.Entry<EndpointQualifier, Address> addressEntry : addressesPerEndpointQualifier.entrySet()) {
+            if (isWanHandshake && !addressEntry.getKey().getType().equals(ProtocolType.WAN)) {
+                // When conducting a WAN handshake we should only share WAN address aliases; there is no
+                //  purpose for other aliases when WAN communicating, and sharing non-WAN aliases can lead
+                //  to an address clash between the clusters, creating chaos. See SUP-432.
+                continue;
+            }
             Collection<Address> addresses = addressMap.computeIfAbsent(addressEntry.getKey().getType(), k -> new ArrayList<>());
             addresses.add(addressEntry.getValue());
         }
-        return addressMap;
     }
 }

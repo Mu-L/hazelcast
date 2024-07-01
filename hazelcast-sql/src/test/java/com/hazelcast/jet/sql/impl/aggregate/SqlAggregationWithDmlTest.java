@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static com.hazelcast.jet.core.JobAssertions.assertThat;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static org.junit.Assert.assertNotNull;
 
@@ -54,7 +55,7 @@ public class SqlAggregationWithDmlTest extends SqlTestSupport {
     @Before
     public void before() {
         createMapping("foo_map", Long.class, Long.class);
-        sql.execute("CREATE MAPPING foo_topic(\n" +
+        sql.executeUpdate("CREATE MAPPING foo_topic(\n" +
                 "    tick BIGINT,\n" +
                 "    ticker VARCHAR,\n" +
                 "    price INT)\n" +
@@ -81,7 +82,7 @@ public class SqlAggregationWithDmlTest extends SqlTestSupport {
     }
 
     private void test_sink_insert(String command) {
-        sql.execute("CREATE JOB jobAVG AS " +
+        sql.executeUpdate("CREATE JOB jobAVG AS " +
                 command + " INTO foo_map" +
                 " SELECT window_start, window_end FROM " +
                 "TABLE(TUMBLE(" +
@@ -93,6 +94,6 @@ public class SqlAggregationWithDmlTest extends SqlTestSupport {
 
         Job job = instance().getJet().getJob("jobAVG");
         assertNotNull(job);
-        assertJobStatusEventually(job, RUNNING);
+        assertThat(job).eventuallyHasStatus(RUNNING);
     }
 }

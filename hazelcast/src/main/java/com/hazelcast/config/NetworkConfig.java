@@ -16,6 +16,7 @@
 
 package com.hazelcast.config;
 
+import com.hazelcast.config.rest.RestConfig;
 import com.hazelcast.config.tpc.TpcSocketConfig;
 import com.hazelcast.config.tpc.TpcConfig;
 import com.hazelcast.internal.tpcengine.util.OS;
@@ -182,7 +183,7 @@ public class NetworkConfig {
      * <p>
      * When the member is shutdown, the server socket port will be in TIME_WAIT state for the next 2 minutes or so. If you
      * start the member right after shutting it down, you may not be able to bind to the same port because it is in TIME_WAIT
-     * state. if you set reuseAddress=true then TIME_WAIT will be ignored and you will be able to bind to the same port again.
+     * state. if you set reuseAddress=true then TIME_WAIT will be ignored, and you will be able to bind to the same port again.
      * <p>
      * This property should not be set to true on the Windows platform: see
      * <ol>
@@ -391,6 +392,13 @@ public class NetworkConfig {
         return icmpFailureDetectorConfig;
     }
 
+    /**
+     *
+     * @return The REST API configuration for the legacy REST server.
+     * @deprecated since 5.5, use Config.getRestConfig() instead. Will be removed at 6.0.
+     * @see RestConfig
+     */
+    @Deprecated(since = "5.5", forRemoval = true)
     public RestApiConfig getRestApiConfig() {
         return restApiConfig;
     }

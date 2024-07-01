@@ -28,6 +28,7 @@ import com.hazelcast.query.impl.QueryableEntry;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,6 +45,7 @@ import static com.hazelcast.query.impl.IndexRegistry.SKIP_PARTITIONS_COUNT_CHECK
 public final class OrPredicate
         implements IndexAwarePredicate, VisitablePredicate, NegatablePredicate, IdentifiedDataSerializable, CompoundPredicate {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     protected Predicate[] predicates;
@@ -186,7 +188,7 @@ public final class OrPredicate
 
     /**
      * Visitable predicates are treated as effectively immutable, therefore callers should not make any changes to
-     * the array passed as argument after is has been set.
+     * the array passed as argument after it has been set.
      * @param predicates    the array of sub-predicates for this {@code Or} operator. It is not safe to make any changes to
      *                      this array after it has been set.
      */
@@ -205,11 +207,10 @@ public final class OrPredicate
         if (this == o) {
             return true;
         }
-        if (o == null || !(o instanceof OrPredicate)) {
+        if (!(o instanceof OrPredicate that)) {
             return false;
         }
 
-        OrPredicate that = (OrPredicate) o;
         return Arrays.equals(predicates, that.predicates);
     }
 
