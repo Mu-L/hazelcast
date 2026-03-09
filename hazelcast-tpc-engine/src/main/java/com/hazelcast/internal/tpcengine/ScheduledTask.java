@@ -58,11 +58,7 @@ final class ScheduledTask implements Runnable, Comparable<ScheduledTask> {
 
     @Override
     public int compareTo(ScheduledTask that) {
-        if (that.deadlineNanos == this.deadlineNanos) {
-            return 0;
-        }
-
-        return this.deadlineNanos > that.deadlineNanos ? 1 : -1;
+        return Long.compare(deadlineNanos, that.deadlineNanos);
     }
 
 

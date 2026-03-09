@@ -620,7 +620,7 @@ public class ReplicatedMapTest extends ReplicatedMapAbstractTest {
         for (int i = 0; i < 100; i++) {
             map.put(i, i);
         }
-        Collection<Integer> values = map.values(new DescendingComparator());
+        Collection<Integer> values = map.values(Comparator.<Integer>naturalOrder().reversed());
         int v = 100;
         for (Integer value : values) {
             assertEquals(--v, (int) value);
@@ -879,13 +879,5 @@ public class ReplicatedMapTest extends ReplicatedMapAbstractTest {
         replicatedMap.destroy();
         Collection<DistributedObject> objects = instance.getDistributedObjects();
         assertEquals(0, objects.size());
-    }
-
-    class DescendingComparator implements Comparator<Integer> {
-
-        @Override
-        public int compare(Integer o1, Integer o2) {
-            return o1.equals(o2) ? 0 : o1 > o2 ? -1 : 1;
-        }
     }
 }
