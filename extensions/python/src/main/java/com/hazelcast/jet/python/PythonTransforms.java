@@ -25,12 +25,14 @@ import javax.annotation.Nonnull;
 /**
  * Transforms which allow the user to call Python user-defined functions
  * from inside a Jet pipeline.
+ * <p>
+ * See also {@link PythonExtension} for a fluent and modernized API.
  *
  * @since Jet 4.0
  */
 public final class PythonTransforms {
 
-    private static final int DEFAULT_MAX_BATCH_SIZE = Integer.MAX_VALUE;
+    static final int DEFAULT_MAX_BATCH_SIZE = Integer.MAX_VALUE;
 
     private PythonTransforms() {
     }
