@@ -22,6 +22,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.internal.serialization.Data;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
 public class TxCollectionItem extends CollectionItem {
@@ -96,7 +97,7 @@ public class TxCollectionItem extends CollectionItem {
         if (removeOperation != that.removeOperation) {
             return false;
         }
-        if (!transactionId.equals(that.transactionId)) {
+        if (!Objects.equals(transactionId, that.transactionId)) {
             return false;
         }
 
@@ -105,9 +106,9 @@ public class TxCollectionItem extends CollectionItem {
 
     @Override
     public int hashCode() {
+        final int prime = 31;
         int result = super.hashCode();
-        result = 31 * result + transactionId.hashCode();
-        result = 31 * result + (removeOperation ? 1 : 0);
+        result = (prime * result) + Objects.hash(removeOperation, transactionId);
         return result;
     }
 }

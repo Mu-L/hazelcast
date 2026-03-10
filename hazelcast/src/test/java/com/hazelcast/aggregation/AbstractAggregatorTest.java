@@ -16,9 +16,12 @@
 
 package com.hazelcast.aggregation;
 
+import com.hazelcast.aggregation.impl.AbstractAggregator;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -29,6 +32,7 @@ import java.util.Map;
 
 import static com.hazelcast.aggregation.TestSamples.createEntryWithValue;
 import static com.hazelcast.aggregation.TestSamples.sampleBigDecimals;
+import static com.hazelcast.test.HazelcastTestSupport.assumeDifferentHashCodes;
 
 @RunWith(HazelcastParallelClassRunner.class)
 @Category({QuickTest.class, ParallelJVMTest.class})
@@ -48,5 +52,13 @@ public class AbstractAggregatorTest {
 
         Aggregator<Map.Entry<BigDecimal, BigDecimal>, BigDecimal> aggregation = Aggregators.bigDecimalAvg("notFound");
         aggregation.accumulate(createEntryWithValue(values.get(0)));
+    }
+
+    @Test
+    public void testEqualsAndHashCode() {
+        assumeDifferentHashCodes();
+        EqualsVerifier.simple().forClass(AbstractAggregator.class)
+                      .suppress(Warning.NONFINAL_FIELDS)
+                      .verify();
     }
 }

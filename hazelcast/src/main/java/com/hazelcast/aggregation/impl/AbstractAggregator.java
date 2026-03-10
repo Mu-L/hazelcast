@@ -21,6 +21,8 @@ import com.hazelcast.internal.json.NonTerminalJsonValue;
 import com.hazelcast.query.impl.Extractable;
 import com.hazelcast.query.impl.getters.MultiResult;
 
+import javax.annotation.Nullable;
+
 import java.io.Serial;
 import java.util.List;
 import java.util.Map;
@@ -47,13 +49,14 @@ import java.util.Objects;
 public abstract class AbstractAggregator<I, E, R> implements Aggregator<I, R> {
     @Serial
     private static final long serialVersionUID = -728859352647481983L;
+    @Nullable
     protected String attributePath;
 
     protected AbstractAggregator() {
         this(null);
     }
 
-    protected AbstractAggregator(String attributePath) {
+    protected AbstractAggregator(@Nullable String attributePath) {
         this.attributePath = attributePath;
     }
 
@@ -116,7 +119,7 @@ public abstract class AbstractAggregator<I, E, R> implements Aggregator<I, R> {
             return false;
         }
         AbstractAggregator<?, ?, ?> that = (AbstractAggregator<?, ?, ?>) o;
-        return attributePath.equals(that.attributePath);
+        return Objects.equals(attributePath, that.attributePath);
     }
 
     @Override

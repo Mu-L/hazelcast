@@ -45,10 +45,13 @@ import static com.hazelcast.internal.util.Preconditions.checkNotNull;
  */
 @SuppressWarnings("checkstyle:methodcount")
 public class WanMapEntryView<K, V> implements EntryView<K, V>, IdentifiedDataSerializable, SerializationServiceAware {
+    @Nonnull
     private SerializationService serializationService;
     private K key;
     private V value;
+    @Nonnull
     private Data dataKey;
+    @Nullable
     private Data dataValue;
     private long cost;
     private long creationTime;
@@ -269,7 +272,7 @@ public class WanMapEntryView<K, V> implements EntryView<K, V>, IdentifiedDataSer
                 && Objects.equals(key, that.key)
                 && Objects.equals(value, that.value)
                 && dataKey.equals(that.dataKey)
-                && dataValue.equals(that.dataValue);
+                && Objects.equals(dataValue, that.dataValue);
     }
 
     @Override

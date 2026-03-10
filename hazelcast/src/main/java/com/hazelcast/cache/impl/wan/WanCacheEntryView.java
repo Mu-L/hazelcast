@@ -38,11 +38,13 @@ import java.util.Objects;
  * @param <V> the type of value.
  */
 public class WanCacheEntryView<K, V> implements CacheEntryView<K, V>, IdentifiedDataSerializable, SerializationServiceAware {
-
+    @Nonnull
     private SerializationService serializationService;
     private K key;
     private V value;
+    @Nonnull
     private Data dataKey;
+    @Nullable
     private Data dataValue;
     /** @see com.hazelcast.wan.impl.InternalWanEvent#getCreationTime() */
     private long creationTime;
@@ -168,7 +170,7 @@ public class WanCacheEntryView<K, V> implements CacheEntryView<K, V>, Identified
                 && lastAccessTime == that.lastAccessTime
                 && hits == that.hits
                 && dataKey.equals(that.dataKey)
-                && dataValue.equals(that.dataValue);
+                && Objects.equals(dataValue, that.dataValue);
     }
 
     @Override

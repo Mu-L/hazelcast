@@ -16,13 +16,18 @@
 
 package com.hazelcast.map.impl.record;
 
+import javax.annotation.Nullable;
+
+import java.util.Objects;
+
 class ObjectRecordWithStats extends AbstractRecord<Object> {
+    @Nullable
     private volatile Object value;
 
     ObjectRecordWithStats() {
     }
 
-    ObjectRecordWithStats(Object value) {
+    ObjectRecordWithStats(@Nullable Object value) {
         setValue(value);
     }
 
@@ -48,13 +53,14 @@ class ObjectRecordWithStats extends AbstractRecord<Object> {
         }
 
         ObjectRecordWithStats that = (ObjectRecordWithStats) o;
-        return value.equals(that.value);
+        return Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
+        final int prime = 31;
         int result = super.hashCode();
-        result = 31 * result + value.hashCode();
+        result = (prime * result) + Objects.hash(value);
         return result;
     }
 

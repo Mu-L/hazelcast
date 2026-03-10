@@ -25,6 +25,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -102,7 +103,7 @@ public class TxQueueItem extends QueueItem {
         if (pollOperation != item.pollOperation) {
             return false;
         }
-        if (!transactionId.equals(item.transactionId)) {
+        if (!Objects.equals(transactionId, item.transactionId)) {
             return false;
         }
 
@@ -111,9 +112,9 @@ public class TxQueueItem extends QueueItem {
 
     @Override
     public int hashCode() {
+        final int prime = 31;
         int result = super.hashCode();
-        result = 31 * result + transactionId.hashCode();
-        result = 31 * result + (pollOperation ? 1 : 0);
+        result = (prime * result) + Objects.hash(pollOperation, transactionId);
         return result;
     }
 }

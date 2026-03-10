@@ -18,9 +18,14 @@ package com.hazelcast.map.impl.record;
 
 import com.hazelcast.internal.serialization.Data;
 
+import javax.annotation.Nullable;
+
+import java.util.Objects;
+
 import static com.hazelcast.internal.util.JVMUtil.REFERENCE_COST_IN_BYTES;
 
 class DataRecordWithStats extends AbstractRecord<Data> {
+    @Nullable
     protected volatile Data value;
 
     DataRecordWithStats() {
@@ -56,13 +61,14 @@ class DataRecordWithStats extends AbstractRecord<Data> {
         }
 
         DataRecordWithStats that = (DataRecordWithStats) o;
-        return value.equals(that.value);
+        return Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
+        final int prime = 31;
         int result = super.hashCode();
-        result = 31 * result + value.hashCode();
+        result = (prime * result) + Objects.hash(value);
         return result;
     }
 
