@@ -177,6 +177,7 @@ public final class ExceptionUtil {
      * @return the given exception wrapped, if it is a case of CCE for SerializedLambda
      *     or the given exception otherwise
      */
+    // TODO: This behaviour changed in JDK 23, we should remove it eventually (see https://bugs.openjdk.org/browse/JDK-8331224)
     public static RuntimeException handleSerializedLambdaCce(HazelcastSerializationException e) {
         Throwable cause = e.getCause();
         while (cause != null) {

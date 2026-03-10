@@ -210,6 +210,18 @@ public abstract class AbstractJobProxy<C, M> implements Job {
         return future;
     }
 
+    @Override
+    public final void join() {
+        try {
+            Job.super.join();
+        } catch (CancellationException exception) {
+            if (exception.getCause() instanceof CancellationByUserException byUser) {
+                throw byUser;
+            }
+            throw exception;
+        }
+    }
+
     @Nonnull @Override
     public final JobStatus getStatus() {
         if (isLightJob()) {
@@ -238,10 +250,8 @@ public abstract class AbstractJobProxy<C, M> implements Job {
             try {
                 f.getNow(null);
                 throw new AssertionError("Future changed state");
-            } catch (CancellationByUserException byUser) {
-                return true;
             } catch (CancellationException e) {
-                return false;
+                return e instanceof CancellationByUserException || e.getCause() instanceof CancellationByUserException;
             }
         } else {
             return isUserCancelled0();
