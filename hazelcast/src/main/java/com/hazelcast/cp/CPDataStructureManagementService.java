@@ -17,27 +17,31 @@
 package com.hazelcast.cp;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 /**
- * Utility methods for managing data structures.
+ * Provides utility operations for managing CP data structures.
  *
  * @since 5.7.0
  */
 public interface CPDataStructureManagementService {
 
     /**
-     * Purges entries from the given CPMap that are older than the specified duration.
+     * Purges entries from the specified {@link CPMap} that are older than the given duration.
      *
-     * @param mapName          name of the CPMap
-     * @param age age threshold for entries to be purged
-     * @return a response object which holds the number of entries purged and the oldest remaining entry timestamp
-     * @throws IllegalArgumentException      if no CPGroup exists for the given mapName
-     * @throws UnsupportedOperationException if purge is not enabled for the given mapName
-     *                                       or if the cluster version is earlier than 5.7
-     * @throws NullPointerException          if mapName or age is {@code null}
+     * @param mapName the name of the CPMap
+     * @param age the age threshold; entries older than this duration are removed
+     * @return a {@link CPMapPurgeResponse} containing the number of purged entries
+     *         and the timestamp of the oldest remaining entry
+     *
+     * @throws IllegalArgumentException if no CP group exists for the given {@code mapName}
+     * @throws IllegalStateException if the CP group exists but the CPMap with the given
+     *         {@code mapName} has not been created
+     * @throws UnsupportedOperationException if purge is not enabled for the given CPMap
+     *         or if the cluster version is earlier than 5.7
+     * @throws NullPointerException if {@code mapName} or {@code age} is {@code null}
+     *
      * @see com.hazelcast.config.cp.CPMapConfig#setPurgeEnabled
      */
-    CompletableFuture<CPMapPurgeResponse> purgeCPMap(String mapName, Duration age);
-
+    CompletionStage<CPMapPurgeResponse> purgeCPMap(String mapName, Duration age);
 }
