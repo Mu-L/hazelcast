@@ -28,6 +28,13 @@
     </parent>
 
     <artifactId>hazelcast-root</artifactId>
+    <!--
+        This is duplicated and could instead be inferred from the parent version
+        But versions-maven-plugin does not support this and breaks
+        https://github.com/mojohaus/versions/blob/a40373df037b6bcebd915901f72433891bfe691e/versions-maven-plugin/src/main/java/org/codehaus/mojo/versions/SetMojo.java#L330-L332
+        So instead we need to duplicate
+    -->
+    <version>5.7.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Hazelcast Root</name>
     <description>Hazelcast In-Memory DataGrid</description>
