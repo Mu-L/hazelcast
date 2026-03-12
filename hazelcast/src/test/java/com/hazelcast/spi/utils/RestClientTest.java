@@ -39,6 +39,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -51,6 +52,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static com.hazelcast.test.HazelcastTestSupport.assertTrueEventually;
 import static java.util.Collections.singletonMap;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -260,6 +262,48 @@ public class RestClientTest {
                 Logger.getLogger(getClass()).info("REST call failed (expected)", e);
             }
             assertTrueEventually(() -> assertTrue("No TLS 1.3 cipher used", server.tls13CipherFound.get()), 8);
+        }
+    }
+
+    @Test
+    public void testNewHttpClientsCreated()
+            throws IOException {
+        String certA = readFile("src/test/resources/kubernetes/ca.crt");
+        String certB = readFile("src/test/resources/example.crt");
+        List<RestClient> clients = List.of(
+                RestClient.create("a"),
+                RestClient.create("a", 5),
+                RestClient.createWithSSL("a", certA),
+                RestClient.createWithSSL("a", certB),
+                RestClient.createWithSSL("a", certA, 5)
+        );
+        for (int i = 0; i < clients.size(); i++) {
+            for (int j = i + 1; j < clients.size(); j++) {
+                assertThat(clients.get(i).getHttpClient()).as(String.format("(%s, %s)", i, j))
+                                                          .isNotSameAs(clients.get(j).getHttpClient());
+            }
+        }
+    }
+
+    @Test
+    public void testExistingHttpClientsReused()
+            throws IOException {
+        String cert = readFile("src/test/resources/kubernetes/ca.crt");
+        List<RestClient> startClients = List.of(
+                RestClient.create("a"),
+                RestClient.create("b", 5),
+                RestClient.createWithSSL("c", cert),
+                RestClient.createWithSSL("d", cert, 5)
+        );
+        List<RestClient> reuseClients = List.of(
+                RestClient.create("z", -2),
+                RestClient.create("y", 5),
+                RestClient.createWithSSL("x", cert),
+                RestClient.createWithSSL("w", cert, 5)
+        );
+        assertThat(startClients).hasSameSizeAs(reuseClients);
+        for (int i = 0; i < startClients.size(); i++) {
+            assertThat(reuseClients.get(i).getHttpClient()).isSameAs(startClients.get(i).getHttpClient());
         }
     }
 

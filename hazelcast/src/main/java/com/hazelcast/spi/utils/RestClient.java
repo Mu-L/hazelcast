@@ -17,6 +17,7 @@
 package com.hazelcast.spi.utils;
 
 import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.internal.util.Sha256Util;
 import com.hazelcast.spi.exception.RestClientException;
 
 import javax.annotation.Nullable;
@@ -34,6 +35,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -46,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public final class RestClient {
 
@@ -61,6 +65,11 @@ public final class RestClient {
 
     private static final String WATCH_FORMAT = "watch=1&resourceVersion=%s";
 
+    /**
+     * Cache HttpClients for reuse between RestClient instances where possible
+     */
+    private static final ConcurrentMap<HttpClientCacheKey, HttpClient> CLIENT_CACHE = new ConcurrentHashMap<>();
+
     private final String url;
     private final List<Parameter> headers = new ArrayList<>();
     private final HttpClient httpClient;
@@ -68,6 +77,9 @@ public final class RestClient {
     private String body;
     private int requestTimeoutSeconds;
     private int retries;
+
+    private record HttpClientCacheKey(@Nullable String caCertHash, int connectTimeoutSeconds) {
+    }
 
     /**
      * Build a new RestClient, backed by an {@link HttpClient} using {@link SSLContext}
@@ -81,14 +93,29 @@ public final class RestClient {
      */
     private RestClient(String url, @Nullable String caCertificate, int connectTimeoutSeconds) {
         this.url = url;
-        HttpClient.Builder builder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1);
-        if (connectTimeoutSeconds > 0) {
-            builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds));
+        this.httpClient = CLIENT_CACHE.computeIfAbsent(createCacheKey(caCertificate, connectTimeoutSeconds), k -> {
+            HttpClient.Builder builder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1);
+            if (connectTimeoutSeconds > 0) {
+                builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds));
+            }
+            if (caCertificate != null) {
+                builder.sslContext(buildSslContext(caCertificate));
+            }
+            return builder.build();
+        });
+    }
+
+    private static HttpClientCacheKey createCacheKey(@Nullable String caCertificate, int connectTimeoutSeconds) {
+        String certHash = caCertificate;
+        try {
+            if (certHash != null) {
+                certHash = Sha256Util.calculateSha256Hex(certHash.getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (NoSuchAlgorithmException ignored) {
+            // SHA-256 guaranteed to be present
         }
-        if (caCertificate != null) {
-            builder.sslContext(buildSslContext(caCertificate));
-        }
-        this.httpClient = builder.build();
+        return new HttpClientCacheKey(certHash,
+                connectTimeoutSeconds < 1 ? DEFAULT_CONNECT_TIMEOUT_SECONDS : connectTimeoutSeconds);
     }
 
     public static RestClient create(String url) {
@@ -303,6 +330,10 @@ public final class RestClient {
         } finally {
             IOUtil.closeResource(caInput);
         }
+    }
+
+    HttpClient getHttpClient() {
+        return httpClient;
     }
 
     public static class Response {
