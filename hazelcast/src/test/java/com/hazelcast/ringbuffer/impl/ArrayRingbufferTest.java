@@ -34,31 +34,31 @@ public class ArrayRingbufferTest {
 
     @Test(expected = StaleSequenceException.class)
     public void testReadStaleSequenceThrowsException() {
-        final ArrayRingbuffer rb = fullRingbuffer();
+        final ArrayRingbuffer<String> rb = fullRingbuffer(5);
         rb.read(rb.headSequence() - 1);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testReadFutureSequenceThrowsException() {
-        final ArrayRingbuffer rb = fullRingbuffer();
+        final ArrayRingbuffer<String> rb = fullRingbuffer(5);
         rb.read(rb.tailSequence() + 1);
     }
 
     @Test(expected = StaleSequenceException.class)
     public void testBlockableReadStaleSequenceThrowsException() {
-        final ArrayRingbuffer rb = fullRingbuffer();
+        final ArrayRingbuffer<String> rb = fullRingbuffer(5);
         rb.checkBlockableReadSequence(rb.headSequence() - 1);
     }
 
     @Test
     public void testBlockableReadFutureSequenceOk() {
-        final ArrayRingbuffer rb = fullRingbuffer();
+        final ArrayRingbuffer<String> rb = fullRingbuffer(5);
         rb.checkBlockableReadSequence(rb.tailSequence() + 1);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testBlockableReadFutureSequenceThrowsException() {
-        final ArrayRingbuffer rb = fullRingbuffer();
+        final ArrayRingbuffer<String> rb = fullRingbuffer(5);
         rb.checkBlockableReadSequence(rb.tailSequence() + 2);
     }
 
@@ -78,8 +78,8 @@ public class ArrayRingbufferTest {
         assertEquals(sequenceAdded, nextTailSequence);
     }
 
-    private static ArrayRingbuffer fullRingbuffer() {
-        final ArrayRingbuffer<String> rb = new ArrayRingbuffer<>(5);
+    public static ArrayRingbuffer<String> fullRingbuffer(int capacity) {
+        final ArrayRingbuffer<String> rb = new ArrayRingbuffer<>(capacity);
         for (int i = 0; i < rb.getCapacity(); i++) {
             rb.add("");
         }

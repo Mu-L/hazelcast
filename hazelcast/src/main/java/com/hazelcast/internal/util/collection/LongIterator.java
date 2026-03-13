@@ -18,13 +18,17 @@
 package com.hazelcast.internal.util.collection;
 
 
+import javax.annotation.Nonnull;
+
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * An iterator for a sequence of primitive integers.
  */
 public class LongIterator implements Iterator<Long> {
     private final long missingValue;
+    @Nonnull
     private final long[] values;
 
     private int position;
@@ -35,7 +39,7 @@ public class LongIterator implements Iterator<Long> {
      * @param missingValue to indicate the value is missing, i.e. not present or null.
      * @param values       to iterate over.
      */
-    public LongIterator(final long missingValue, final long[] values) {
+    public LongIterator(final long missingValue, @Nonnull final long[] values) {
         this.missingValue = missingValue;
         this.values = values;
     }
@@ -70,9 +74,12 @@ public class LongIterator implements Iterator<Long> {
      * @return the next long value.
      */
     public long nextValue() {
-        final long value = values[position];
-        position++;
-        return value;
+        if (hasNext()) {
+            final long value = values[position];
+            position++;
+            return value;
+        }
+        throw new NoSuchElementException();
     }
 
     void reset() {

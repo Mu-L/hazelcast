@@ -16,7 +16,10 @@
 
 package com.hazelcast.spi.merge;
 
+import javax.annotation.Nonnull;
+
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Read-only iterator over items in a provided {@link RingbufferMergeData}.
@@ -25,11 +28,11 @@ import java.util.Iterator;
  * @since 3.10
  */
 public class RingbufferMergeDataReadOnlyIterator<E> implements Iterator<E> {
-
+    @Nonnull
     private final RingbufferMergeData ringbuffer;
     private long sequence;
 
-    RingbufferMergeDataReadOnlyIterator(RingbufferMergeData ringbuffer) {
+    RingbufferMergeDataReadOnlyIterator(@Nonnull RingbufferMergeData ringbuffer) {
         this.ringbuffer = ringbuffer;
         this.sequence = ringbuffer.getHeadSequence();
     }
@@ -41,7 +44,10 @@ public class RingbufferMergeDataReadOnlyIterator<E> implements Iterator<E> {
 
     @Override
     public E next() {
-        return ringbuffer.read(sequence++);
+        if (hasNext()) {
+            return ringbuffer.read(sequence++);
+        }
+        throw new NoSuchElementException();
     }
 
     @Override

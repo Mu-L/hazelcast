@@ -16,16 +16,20 @@
 
 package com.hazelcast.ringbuffer.impl;
 
+import javax.annotation.Nonnull;
+
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Read-only iterator over items in a provided {@link com.hazelcast.ringbuffer.impl.Ringbuffer}.
  */
 public class ReadOnlyRingbufferIterator<E> implements Iterator<E> {
+    @Nonnull
     private final ArrayRingbuffer<E> ringbuffer;
     private long sequence;
 
-    ReadOnlyRingbufferIterator(ArrayRingbuffer<E> ringbuffer) {
+    ReadOnlyRingbufferIterator(@Nonnull ArrayRingbuffer<E> ringbuffer) {
         this.ringbuffer = ringbuffer;
         this.sequence = ringbuffer.headSequence();
     }
@@ -37,7 +41,10 @@ public class ReadOnlyRingbufferIterator<E> implements Iterator<E> {
 
     @Override
     public E next() {
-        return ringbuffer.read(sequence++);
+        if (hasNext()) {
+            return ringbuffer.read(sequence++);
+        }
+        throw new NoSuchElementException();
     }
 
     @Override

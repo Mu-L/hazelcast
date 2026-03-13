@@ -40,7 +40,7 @@ public class RingbufferMergeData implements Iterable<Object> {
         this.items = new Object[capacity];
     }
 
-    public RingbufferMergeData(Ringbuffer<Object> ringbuffer) {
+    public RingbufferMergeData(Ringbuffer<?> ringbuffer) {
         this.items = ringbuffer.getItems();
         this.headSequence = ringbuffer.headSequence();
         this.tailSequence = ringbuffer.tailSequence();
