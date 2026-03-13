@@ -55,6 +55,15 @@ fi
 
 # Disable the log4j2 shutdown hook, otherwise log lines during node shutdown might be lost
 JDK_OPTS="$JDK_OPTS -Dlog4j.shutdownHookEnabled=false -Dhazelcast.logging.shutdown=true"
+# Suppress Java 24 and 25 warnings for deprecated Unsafe methods.
+# This is required because Hazelcast and JCTools internally use Unsafe API.
+# Java 23: 'allow' is the default, so no explicit setting is needed.
+# Java 24-25: 'warn' is the default, so we explicitly set it to 'allow'.
+# Java 26 or later: 'deny' will be the default, and 'allow' option will no longer be supported.
+JAVA_VERSION=$(${JAVA} -version 2>&1 | sed -En 's/.* version "([0-9]+).*$/\1/p')
+if [[ "$JAVA_VERSION" -ge 24 && "$JAVA_VERSION" -le 25 ]]; then
+    JDK_OPTS="$JDK_OPTS --sun-misc-unsafe-memory-access=allow"
+fi
 
 # ensure CLASSPATH_DEFAULT is unix style + trimmed
 if [ -n "${CLASSPATH_DEFAULT}" ]; then

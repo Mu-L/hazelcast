@@ -88,6 +88,14 @@ if "x%HAZELCAST_CONFIG%" == "x" (
 )
 
 set JAVA_OPTS=%JAVA_OPTS% -Dhazelcast.config="%HAZELCAST_HOME%\!HAZELCAST_CONFIG!"
+:: Suppress Java 24 and 25 warnings for deprecated Unsafe methods.
+:: This is required because Hazelcast and JCTools internally use Unsafe API.
+:: Java 23: 'allow' is the default, so no explicit setting is needed.
+:: Java 24-25: 'warn' is the default, so we explicitly set it to 'allow'.
+:: Java 26 or later: 'deny' will be the default, and 'allow' option will no longer be supported.
+IF %JAVA_VERSION% GEQ 24 IF %JAVA_VERSION% LEQ 25 (
+    set JAVA_OPTS=%JAVA_OPTS% --sun-misc-unsafe-memory-access=allow
+)
 :: classpath
 
 set CLASSPATH="%HAZELCAST_HOME%\lib\*;%HAZELCAST_HOME%\bin\user-lib;%HAZELCAST_HOME%\bin\user-lib\*;%CLASSPATH%"
