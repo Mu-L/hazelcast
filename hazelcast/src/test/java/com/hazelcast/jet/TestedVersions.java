@@ -50,4 +50,6 @@ public final class TestedVersions {
 
     private static final String TEST_NEO4J_VERSION = System.getProperty("test.neo4j.version", "5.5.0");
     public static final DockerImageName TEST_NEO4J_IMAGE = DockerImageName.parse("neo4j:" + TEST_NEO4J_VERSION);
+
+    public static final DockerImageName LOCALSTACK_IMAGE = DockerImageName.parse("localstack/localstack:3.0.2");
 }

@@ -41,11 +41,11 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.TestedVersions.LOCALSTACK_IMAGE;
 import static com.hazelcast.jet.core.JobAssertions.assertThat;
 import static com.hazelcast.test.DockerTestUtil.assumeDockerEnabled;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testcontainers.utility.DockerImageName.parse;
 
 @Category(SlowTest.class)
 @SuppressWarnings("StaticVariableName")
@@ -76,8 +76,7 @@ public class KinesisLimitExceededIntegrationTest extends AbstractKinesisTest {
         } else {
             assumeDockerEnabled();
 
-            localStack = new LocalStackContainer(parse("localstack/localstack")
-                    .withTag(LOCALSTACK_VERSION))
+            localStack = new LocalStackContainer(LOCALSTACK_IMAGE)
                     // Introduce errors so some items fail to be written and need to be retried
                     .withEnv("KINESIS_ERROR_PROBABILITY", "0.25")
                     .withServices(Service.KINESIS);

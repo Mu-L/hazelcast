@@ -39,7 +39,6 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -57,6 +56,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CompletionException;
 
+import static com.hazelcast.jet.TestedVersions.LOCALSTACK_IMAGE;
 import static com.hazelcast.jet.core.JobAssertions.assertThat;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.kafka.connect.TestUtil.getConnectorURL;
@@ -75,7 +75,7 @@ public class KafkaConnectSQSIT extends JetTestSupport {
 
     @ClassRule
     public static LocalStackContainer container =
-            new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.0.2"))
+            new LocalStackContainer(LOCALSTACK_IMAGE)
             .withServices(LocalStackContainer.Service.SQS)
             .withEnv("SQS_ENDPOINT_STRATEGY", "path");
 

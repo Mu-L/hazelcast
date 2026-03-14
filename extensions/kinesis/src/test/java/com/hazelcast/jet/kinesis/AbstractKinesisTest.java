@@ -58,9 +58,6 @@ import static org.junit.Assert.assertEquals;
 @RunWith(HazelcastSerialClassRunner.class)
 @Category(QuickTest.class)
 public abstract class AbstractKinesisTest extends JetTestSupport {
-
-    public static final String LOCALSTACK_VERSION = "2.1.0";
-
     protected static final int KEYS = 250;
     protected static final int MEMBER_COUNT = 2;
     protected static final int MESSAGES = 2_500;

@@ -49,6 +49,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
 
 import static com.hazelcast.internal.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.TestedVersions.LOCALSTACK_IMAGE;
+import static com.hazelcast.jet.TestedVersions.TOXIPROXY_IMAGE;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobAssertions.assertThat;
 import static com.hazelcast.jet.kinesis.KinesisSinks.MAXIMUM_KEY_LENGTH;
@@ -57,7 +59,6 @@ import static com.hazelcast.test.DockerTestUtil.assumeDockerEnabled;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
-import static org.testcontainers.utility.DockerImageName.parse;
 
 @SuppressWarnings("StaticVariableName")
 @Category(NightlyTest.class)
@@ -86,15 +87,13 @@ public class KinesisFailureTest extends AbstractKinesisTest {
     public static void beforeClass() throws IOException {
         assumeDockerEnabled();
 
-        localStack = new LocalStackContainer(parse("localstack/localstack")
-                .withTag(LOCALSTACK_VERSION))
+        localStack = new LocalStackContainer(LOCALSTACK_IMAGE)
                 .withNetwork(NETWORK)
                 .withNetworkAliases(NETWORK_ALIAS)
                 .withServices(Service.KINESIS)
                 .withLogConsumer(new Slf4jLogConsumer(LOGGER));
         localStack.start();
-        toxiproxy = new ToxiproxyContainer(parse("ghcr.io/shopify/toxiproxy")
-                .withTag("2.5.0"))
+        toxiproxy = new ToxiproxyContainer(TOXIPROXY_IMAGE)
                 .withNetwork(NETWORK)
                 .withNetworkAliases(NETWORK_ALIAS)
                 .withLogConsumer(new Slf4jLogConsumer(LOGGER));

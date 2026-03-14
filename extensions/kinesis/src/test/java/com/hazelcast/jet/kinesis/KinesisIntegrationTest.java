@@ -56,6 +56,7 @@ import static com.amazonaws.services.kinesis.model.ShardIteratorType.AT_SEQUENCE
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.AT_TIMESTAMP;
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.LATEST;
 import static com.amazonaws.services.kinesis.model.ShardIteratorType.TRIM_HORIZON;
+import static com.hazelcast.jet.TestedVersions.LOCALSTACK_IMAGE;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.JobAssertions.assertThat;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isOrHasCause;
@@ -68,7 +69,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.testcontainers.utility.DockerImageName.parse;
 
 @SuppressWarnings("StaticVariableName")
 @Category(NightlyTest.class)
@@ -101,8 +101,7 @@ public class KinesisIntegrationTest extends AbstractKinesisTest {
         } else {
             assumeDockerEnabled();
 
-            localStack = new LocalStackContainer(parse("localstack/localstack")
-                    .withTag(LOCALSTACK_VERSION))
+            localStack = new LocalStackContainer(LOCALSTACK_IMAGE)
                     .withServices(Service.KINESIS);
             localStack.start();
 
