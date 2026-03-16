@@ -543,4 +543,9 @@ public class IdentifiedDataSerializableFactory implements DataSerializableFactor
         }
         return o != null && getClass() == o.getClass();
     }
+
+    @Override
+    public int hashCode() {
+        return 0;
+    }
 }

@@ -88,7 +88,6 @@ public class MatchingPointConfigPatternMatcher implements ConfigPatternMatcher {
 
     @Override
     public int hashCode() {
-        return super.hashCode();
+        return 0;
     }
-
 }

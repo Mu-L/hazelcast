@@ -879,6 +879,11 @@ public class CompactStreamSerializerTest {
         }
 
         @Override
+        public int hashCode() {
+            return 0;
+        }
+
+        @Override
         public String toString() {
             return "EmptyDTO{}";
         }

@@ -80,6 +80,6 @@ public class WildcardConfigPatternMatcher implements ConfigPatternMatcher {
 
     @Override
     public int hashCode() {
-        return super.hashCode();
+        return 0;
     }
 }
