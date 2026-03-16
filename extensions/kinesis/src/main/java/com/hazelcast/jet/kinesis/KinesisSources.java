@@ -353,10 +353,20 @@ public final class KinesisSources {
             ByteBuffer buffer = record.getData();
             int position = buffer.position();
             int limit = buffer.limit();
-            if (position == 0 && limit == buffer.capacity()) {
-                return buffer.array();
+            byte[] array;
+
+            // Detect ReadOnly buffer
+            if (buffer.hasArray()) {
+                array = buffer.array();
             } else {
-                return Arrays.copyOfRange(buffer.array(), position, limit);
+                array = new byte[buffer.remaining()];
+                buffer.get(array);
+            }
+
+            if (position == 0 && limit == buffer.capacity()) {
+                return array;
+            } else {
+                return Arrays.copyOfRange(array, position, limit);
             }
         }
     }

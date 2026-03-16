@@ -410,7 +410,7 @@ public class KinesisSinkP<T> implements Processor {
             putRecordsRequestEntry.setPartitionKey(partitionKey);
 
             ByteBuffer byteBuffer = putRecordsRequestEntry.getData();
-            if (byteBuffer == null || byteBuffer.capacity() < data.length) {
+            if (byteBuffer == null || byteBuffer.isReadOnly() || byteBuffer.capacity() < data.length) {
                 putRecordsRequestEntry.setData(ByteBuffer.wrap(data));
             } else {
                 ((java.nio.Buffer) byteBuffer).clear(); //cast needed due to JDK 9 breaking compatibility
