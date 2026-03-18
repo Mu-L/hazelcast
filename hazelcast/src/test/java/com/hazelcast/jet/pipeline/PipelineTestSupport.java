@@ -103,6 +103,10 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         return hz().getJet().newJob(p);
     }
 
+    protected Job start(JobConfig jobConfig) {
+        return hz().getJet().newJob(p, jobConfig);
+    }
+
     protected BatchStage<Integer> batchStageFromList(List<Integer> input) {
         return p.readFrom(TestSources.items(input));
     }

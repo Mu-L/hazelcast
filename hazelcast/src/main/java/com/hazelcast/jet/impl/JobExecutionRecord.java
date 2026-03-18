@@ -41,7 +41,7 @@ import static com.hazelcast.jet.impl.util.Util.toLocalTime;
  */
 public class JobExecutionRecord implements IdentifiedDataSerializable {
 
-    public static final int NO_SNAPSHOT = -1;
+    public static final long NO_SNAPSHOT = -1;
     /**
      * Timestamp to order async updates to the JobRecord. {@link
      * JobRepository#writeJobExecutionRecord}.

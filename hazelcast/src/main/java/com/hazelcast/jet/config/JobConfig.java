@@ -23,6 +23,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.annotation.EvolvingApi;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
@@ -56,7 +57,9 @@ import java.util.Objects;
 import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static com.hazelcast.jet.config.JobConfigArguments.REQUIRE_SNAPSHOT_BEFORE_PROCESSING;
 import static com.hazelcast.jet.config.ResourceType.CLASS;
+import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -1267,6 +1270,48 @@ public class JobConfig implements IdentifiedDataSerializable {
         throwIfLocked();
         this.initialSnapshotName = initialSnapshotName;
         return this;
+    }
+
+    /**
+     * Configures whether the job must complete an initial snapshot before it
+     * begins normal execution.
+     * <p>
+     * When set to {@code true}, the job will:
+     * <ul>
+     *   <li>Trigger an initial snapshot before processing any entries,</li>
+     *   <li>Delay entry processing until the snapshot completes successfully,</li>
+     *   <li>The job will not transition to the {@link JobStatus#RUNNING} state until the
+     *       initial snapshot has completed successfully.
+     * </ul>
+     * If set to {@code false}, the job follows the default behavior and does
+     * not require an initial snapshot prior to execution.
+     * <p>
+     * Note: This flag is ignored if {@link #setInitialSnapshotName(String)} is
+     * configured. In that case, the job restores its state from the provided
+     * snapshot and proceeds with normal execution according to that snapshot.
+     * <p>
+     * To prevent data loss in case of a failure before the first snapshot completes,
+     * enable this option for jobs that use stateful sources such as mapJournal or Kafka.
+     *
+     * @param required {@code true} to require an initial snapshot before normal
+     *                 execution; {@code false} to use the default behavior
+     * @since 5.7
+     */
+    public void setRequireSnapshotBeforeProcessing(boolean required) {
+        setArgument(REQUIRE_SNAPSHOT_BEFORE_PROCESSING, required);
+    }
+
+    /**
+     * Returns whether the job is configured to require completion of an
+     * initial snapshot before starting normal execution.
+     *
+     * @return {@code true} if an initial snapshot is required; {@code false}
+     *         otherwise
+     * @see #setRequireSnapshotBeforeProcessing(boolean)
+     * @since 5.7
+     */
+    public boolean isRequireSnapshotBeforeProcessing() {
+        return TRUE.equals(getArgument(REQUIRE_SNAPSHOT_BEFORE_PROCESSING));
     }
 
     /**

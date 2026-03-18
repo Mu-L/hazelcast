@@ -58,6 +58,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.nio.serialization.impl.Versioned;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
@@ -81,6 +82,7 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static com.hazelcast.internal.cluster.Versions.V5_7;
 import static com.hazelcast.internal.util.ConcurrencyUtil.CALLER_RUNS;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
@@ -105,7 +107,7 @@ import static java.util.stream.Collectors.toMap;
 /**
  * An object sent from a master to members.
  */
-public class ExecutionPlan implements IdentifiedDataSerializable {
+public class ExecutionPlan implements IdentifiedDataSerializable, Versioned {
 
     // use same size as DEFAULT_QUEUE_SIZE from Edges. In the future we might
     // want to make this configurable
@@ -120,6 +122,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     private int memberIndex;
     private int memberCount;
     private long lastSnapshotId;
+    private boolean requireSnapshotBeforeProcessing;
     private boolean isLightJob;
     private Subject subject;
 
@@ -157,11 +160,21 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     ExecutionPlan() {
     }
 
-    ExecutionPlan(Map<Address, int[]> partitionAssignment, JobConfig jobConfig, long lastSnapshotId,
-                  int memberIndex, int memberCount, boolean isLightJob, Subject subject, int expectedVerticesCount) {
+    ExecutionPlan(
+        Map<Address, int[]> partitionAssignment,
+        JobConfig jobConfig,
+        long lastSnapshotId,
+        boolean requireSnapshotBeforeProcessing,
+        int memberIndex,
+        int memberCount,
+        boolean isLightJob,
+        Subject subject,
+        int expectedVerticesCount
+    ) {
         this.partitionAssignment = partitionAssignment;
         this.jobConfig = jobConfig;
         this.lastSnapshotId = lastSnapshotId;
+        this.requireSnapshotBeforeProcessing = requireSnapshotBeforeProcessing;
         this.memberIndex = memberIndex;
         this.memberCount = memberCount;
         this.isLightJob = isLightJob;
@@ -423,6 +436,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         out.writeInt(memberIndex);
         out.writeInt(memberCount);
         writeSubject(out, subject);
+        // RU_COMPAT_5_7
+        if (out.getVersion().isGreaterOrEqual(V5_7)) {
+            out.writeBoolean(requireSnapshotBeforeProcessing);
+        }
     }
 
     @Override
@@ -435,6 +452,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         memberIndex = in.readInt();
         memberCount = in.readInt();
         subject = ImdgUtil.readSubject(in);
+        if (in.getVersion().isGreaterOrEqual(V5_7)) {
+            requireSnapshotBeforeProcessing = in.readBoolean();
+        }
     }
 
     // End implementation of IdentifiedDataSerializable
@@ -852,5 +872,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     public List<VertexDef> getVertices() {
         return unmodifiableList(asList(vertices));
+    }
+
+    public boolean isRequireSnapshotBeforeProcessing() {
+        return requireSnapshotBeforeProcessing;
     }
 }

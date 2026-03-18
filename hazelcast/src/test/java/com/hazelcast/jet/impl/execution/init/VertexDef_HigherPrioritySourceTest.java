@@ -135,7 +135,7 @@ public class VertexDef_HigherPrioritySourceTest extends SimpleTestInClusterSuppo
         JobConfig jobConfig = new JobConfig();
         Map<MemberInfo, ExecutionPlan> executionPlans;
         try {
-            executionPlans = createExecutionPlans(nodeEngineImpl, membersView, dag, 0, 0, jobConfig, 0, false, null).get();
+            executionPlans = createExecutionPlans(nodeEngineImpl, membersView, dag, 0, 0, jobConfig, 0, false, false, null).get();
         } catch (InterruptedException | ExecutionException e) {
             throw rethrow(e);
         }

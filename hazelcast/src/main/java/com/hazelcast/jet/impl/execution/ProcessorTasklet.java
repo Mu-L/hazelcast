@@ -153,6 +153,8 @@ public class ProcessorTasklet implements Tasklet {
     // Once a terminal snapshot barrier is reached, this is always true.
     private boolean waitForAllBarriers;
 
+    private boolean awaitInitialSnapshot;
+
     private final AtomicLongArray receivedCounts;
     private final AtomicLongArray receivedBatches;
     private final AtomicLongArray emittedCounts;
@@ -209,6 +211,7 @@ public class ProcessorTasklet implements Tasklet {
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         coalescers = new KeyedWatermarkCoalescer(instreams.size());
+        awaitInitialSnapshot = ssContext.isAwaitInitialSnapshot();
     }
 
     private Queue<InboundEdgeStream[]> createInstreamGroupQueue(List<? extends InboundEdgeStream> instreams) {
@@ -548,6 +551,17 @@ public class ProcessorTasklet implements Tasklet {
                 return;
             }
         }
+
+        if (awaitInitialSnapshot) {
+            if (ssContext.isAwaitInitialSnapshot()) {
+                logger.finest("Processor did not started, await initial snapshot");
+                return;
+            } else {
+                awaitInitialSnapshot = false;
+                logger.fine("Processor: " + processor.getClass().getSimpleName() + " initial snapshot done. Start processing");
+            }
+        }
+
         if (processor.complete()) {
             progTracker.madeProgress();
             state = pendingSnapshotId2 < pendingSnapshotId1

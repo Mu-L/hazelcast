@@ -185,6 +185,15 @@ public class MasterContext implements DynamicMetricsProvider {
         setJobStatus(jobStatus, null, false);
     }
 
+    void setJobStatusUnderLock(JobStatus jobStatus) {
+        lock();
+        try {
+            setJobStatus(jobStatus, null, false);
+        } finally {
+            unlock();
+        }
+    }
+
     public JobConfig jobConfig() {
         return jobRecord.getConfig();
     }
@@ -294,6 +303,10 @@ public class MasterContext implements DynamicMetricsProvider {
 
     Map<MemberInfo, ExecutionPlan> executionPlanMap() {
         return executionPlanMap;
+    }
+
+    ExecutionPlan getAnyExecutionPlan() {
+        return executionPlanMap.values().stream().findAny().orElseThrow();
     }
 
     MembersView membersView() {

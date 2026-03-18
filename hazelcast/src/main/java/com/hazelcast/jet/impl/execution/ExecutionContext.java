@@ -157,8 +157,13 @@ public class ExecutionContext implements DynamicMetricsProvider {
         // Must be populated early, so all processor suppliers are
         // available to be completed in the case of init failure
         vertices = plan.getVertices();
-        snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
-                plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
+        snapshotContext = new SnapshotContext(
+            nodeEngine.getLogger(SnapshotContext.class),
+            jobNameAndExecutionId(),
+            plan.lastSnapshotId(),
+            jobConfig.getProcessingGuarantee(),
+            plan.isRequireSnapshotBeforeProcessing()
+        );
 
         serializationService = isLightJob
                 ? (InternalSerializationService) nodeEngine.getSerializationService()

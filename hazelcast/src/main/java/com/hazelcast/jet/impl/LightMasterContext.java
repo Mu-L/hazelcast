@@ -160,7 +160,7 @@ public final class LightMasterContext {
 
         Set<Vertex> vertices = new HashSet<>();
         dag.iterator().forEachRemaining(vertices::add);
-        return createExecutionPlans(nodeEngine, members, dag, jobId, jobId, jobConfig, 0, true, subject)
+        return createExecutionPlans(nodeEngine, members, dag, jobId, jobId, jobConfig, 0, false, true, subject)
                 .handleAsync((planMap, e) -> {
                     LightMasterContext mc = new LightMasterContext(nodeEngine, jobId, logger,
                             jobIdString, jobConfig, planMap, vertices);

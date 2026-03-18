@@ -44,12 +44,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.logging.Level;
 
+import static com.hazelcast.internal.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.core.JobStatus.STARTING;
 import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static com.hazelcast.jet.impl.JobRepository.safeImap;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
-import static com.hazelcast.internal.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
@@ -155,6 +156,51 @@ class MasterSnapshotContext {
         enqueueSnapshot(null, false, null);
     }
 
+
+    /**
+     * Requests an initial snapshot if it is required for the current execution plan.
+     *
+     * <p>If the execution plan does not require a snapshot before processing,
+     * this method returns a completed future with {@code false}.
+     *
+     * <p>If a snapshot is required, this method returns a future that:
+     * <ul>
+     *   <li>completes with {@code true} when the snapshot completes successfully</li>
+     *   <li>completes exceptionally if the snapshot fails</li>
+     * </ul>
+     *
+     * @return a {@link CompletableFuture} that completes with {@code true} if an initial
+     *         snapshot was required and completed successfully, or {@code false} if no
+     *         snapshot was needed
+     */
+    CompletableFuture<Boolean> requestInitialSnapshotIfNeeded() {
+        if (!mc.getAnyExecutionPlan().isRequireSnapshotBeforeProcessing()) {
+            return CompletableFuture.completedFuture(false);
+        }
+
+        CompletableFuture<Void> future;
+        mc.lock();
+        try {
+            var snapshot = snapshotQueue.peek();
+            if (snapshot == null) {
+                future = new CompletableFuture<>();
+                logger.fine("Initial snapshot scheduled");
+                snapshotQueue.add(new SnapshotRequest(null, false, future));
+            } else {
+                // This can only be the terminal snapshot.
+                // The terminal snapshot will be treated as the initial snapshot.
+                assert snapshot.isTerminal;
+                assert snapshot.future != null;
+                logger.fine("Terminal snapshot was requested; the initial snapshot is the terminal snapshot.");
+                future = snapshot.future;
+            }
+        } finally {
+            mc.unlock();
+        }
+        tryBeginSnapshot(true);
+        return future.thenApply(v -> true);
+    }
+
     void startScheduledSnapshot(long executionId) {
         mc.lock();
         try {
@@ -177,12 +223,17 @@ class MasterSnapshotContext {
     }
 
     void tryBeginSnapshot() {
+        tryBeginSnapshot(false);
+    }
+
+    void tryBeginSnapshot(boolean allowStartingState) {
         mc.coordinationService().submitToCoordinatorThread(() -> {
             final SnapshotRequest requestedSnapshot;
             mc.lock();
             long localExecutionId;
             try {
-                if (mc.jobStatus() != RUNNING) {
+                // Allow starting the initial snapshot for a job in the STARTING state.
+                if (mc.jobStatus() != RUNNING && (!allowStartingState || mc.jobStatus() != STARTING)) {
                     logger.fine("Not beginning snapshot, %s is not RUNNING, but %s", mc.jobIdString(), mc.jobStatus());
                     return;
                 }

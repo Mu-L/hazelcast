@@ -23,6 +23,7 @@ import com.hazelcast.internal.util.collection.IntHashSet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -88,6 +89,7 @@ public final class ExecutionPlanBuilder {
             long executionId,
             JobConfig jobConfig,
             long lastSnapshotId,
+            boolean restoredFromSnapshot,
             boolean isLightJob,
             Subject subject
     ) {
@@ -131,9 +133,12 @@ public final class ExecutionPlanBuilder {
 
         final Map<MemberInfo, ExecutionPlan> plans = new HashMap<>();
         int memberIndex = 0;
+        boolean requireSnapshotBeforeProcessing  = !isLightJob
+            && !restoredFromSnapshot
+            && requireSnapshotBeforeProcessing(jobConfig);
         for (MemberInfo member : partitionsByMember.keySet()) {
-            plans.put(member, new ExecutionPlan(partitionsByAddress, jobConfig, lastSnapshotId, memberIndex++,
-                    memberCount, isLightJob, subject, verticesIdAndOrder.count()));
+            plans.put(member, new ExecutionPlan(partitionsByAddress, jobConfig, lastSnapshotId,
+                requireSnapshotBeforeProcessing, memberIndex++, memberCount, isLightJob, subject, verticesIdAndOrder.count()));
         }
 
         final List<Address> addresses = toList(partitionsByMember.keySet(), MemberInfo::getAddress);
@@ -543,5 +548,13 @@ public final class ExecutionPlanBuilder {
         }
 
         return partitionAssignment;
+    }
+
+    /**
+     * Determines whether an initial snapshot required config is enabled.
+     */
+    private static boolean requireSnapshotBeforeProcessing(JobConfig jobConfig) {
+        return jobConfig.getProcessingGuarantee() != ProcessingGuarantee.NONE
+            && jobConfig.isRequireSnapshotBeforeProcessing();
     }
 }

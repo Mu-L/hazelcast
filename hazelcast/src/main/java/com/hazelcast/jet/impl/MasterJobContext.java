@@ -194,6 +194,7 @@ public class MasterJobContext {
      * once and using returned value.
      */
     private volatile TerminationRequest terminationRequest;
+    private boolean restoredFromSnapshot;
 
     MasterJobContext(MasterContext masterContext, ILogger logger) {
         mc = masterContext;
@@ -306,6 +307,7 @@ public class MasterJobContext {
 
                   if (snapshotMapName != null) {
                       rewriteDagWithSnapshotRestore(dag, snapshotId, snapshotMapName, snapshotName);
+                      restoredFromSnapshot = true;
                   } else {
                       logger.info("Didn't find any snapshot to restore for " + mc.jobIdString());
                   }
@@ -339,7 +341,7 @@ public class MasterJobContext {
             MembersView membersView) {
         return ExecutionPlanBuilder.createExecutionPlans(mc.nodeEngine(), membersView.getMembers(),
                 dag, mc.jobId(), mc.executionId(), mc.jobConfig(), mc.jobExecutionRecord().ongoingSnapshotId(),
-                false, mc.jobRecord().getSubject());
+                restoredFromSnapshot, false, mc.jobRecord().getSubject());
     }
 
     private void initExecution(MembersView membersView, Map<MemberInfo, ExecutionPlan> executionPlanMap, DAG dag) {
@@ -502,7 +504,7 @@ public class MasterJobContext {
                 setFinalResult(createCancellationException());
             }
             if (mode.isWithTerminalSnapshot()) {
-                mc.snapshotContext().enqueueSnapshot(null, true, null);
+                mc.snapshotContext().enqueueSnapshot(null, true, new CompletableFuture<>());
             }
 
             result = tuple2(executionCompletionFuture, null);
@@ -636,9 +638,26 @@ public class MasterJobContext {
                 responses -> onStartExecutionComplete(getErrorFromResponses("Execution", responses),
                         responses);
 
-        mc.setJobStatus(RUNNING);
-        // There can be a snapshot enqueued while the job is starting, start it now if that's the case
-        mc.snapshotContext().tryBeginSnapshot();
+        mc.snapshotContext()
+            .requestInitialSnapshotIfNeeded()
+            .whenComplete(
+                (snapshotRequested, t) -> {
+                    mc.coordinationService().assertOnCoordinatorThread();
+                    if (t != null) {
+                        logger.warning("Initial snapshot failed. Terminating job.");
+                        requestTermination(CANCEL_FORCEFUL, true, false);
+                        return;
+                    }
+                    mc.setJobStatusUnderLock(RUNNING);
+                    // There can be a terminal snapshot enqueued while the job is starting, start it now if that's the case
+                    // If the job does not require an initial snapshot, attempt to process terminal snapshot immediately.
+                    // Otherwise, the terminal snapshot was started at the end of phase2 of initial snapshot.
+                    if (!snapshotRequested) {
+                        mc.snapshotContext().tryBeginSnapshot();
+                    }
+                }
+            );
+
         mc.invokeOnParticipants(operationCtor, completionCallback, executionManager::processResponse, false);
 
         if (mc.jobConfig().getProcessingGuarantee() != NONE) {

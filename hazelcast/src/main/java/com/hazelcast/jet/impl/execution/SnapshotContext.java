@@ -125,6 +125,8 @@ public class SnapshotContext {
      */
     private volatile CompletableFuture<Void> phase2Future;
 
+    private volatile boolean awaitInitialSnapshot;
+
     private final AtomicLong totalBytes = new AtomicLong();
     private final AtomicLong totalKeys = new AtomicLong();
     private final AtomicLong totalChunks = new AtomicLong();
@@ -133,10 +135,17 @@ public class SnapshotContext {
     public SnapshotContext(ILogger logger, String jobNameAndExecutionId, long activeSnapshotId,
                            ProcessingGuarantee guarantee
     ) {
+        this(logger, jobNameAndExecutionId, activeSnapshotId, guarantee, false);
+    }
+
+    public SnapshotContext(ILogger logger, String jobNameAndExecutionId, long activeSnapshotId,
+                           ProcessingGuarantee guarantee, boolean requireSnapshotBeforeProcessing
+    ) {
         this.jobNameAndExecutionId = jobNameAndExecutionId;
         this.activeSnapshotIdPhase1 = activeSnapshotIdPhase2 = currentSnapshotId = activeSnapshotId;
         this.guarantee = guarantee;
         this.logger = logger;
+        this.awaitInitialSnapshot = requireSnapshotBeforeProcessing;
     }
 
     /**
@@ -407,6 +416,13 @@ public class SnapshotContext {
             assert phase2Future == null : "phase2Future=" + phase2Future;
             return;
         }
+
+        if (awaitInitialSnapshot) {
+            if (snapshotError.get() == null && lastPhase1Successful) {
+                awaitInitialSnapshot = false;
+            }
+        }
+
         phase2Future.complete(null);
         phase2Future = null;
     }
@@ -418,5 +434,9 @@ public class SnapshotContext {
     // public-visible for tests
     AtomicInteger getNumRemainingTasklets() {
         return numRemainingTasklets;
+    }
+
+    public boolean isAwaitInitialSnapshot() {
+        return awaitInitialSnapshot;
     }
 }
