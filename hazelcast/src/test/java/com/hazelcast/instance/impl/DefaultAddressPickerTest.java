@@ -46,6 +46,7 @@ import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
@@ -68,6 +69,8 @@ import static org.junit.Assume.assumeNotNull;
 @RunWith(HazelcastSerialClassRunner.class)
 @Category({QuickTest.class})
 public class DefaultAddressPickerTest {
+
+    private static final ILogger LOGGER = Logger.getLogger(DefaultAddressPickerTest.class);
 
     private static final String PUBLIC_HOST = "www.hazelcast.org";
     private static final String HAZELCAST_LOCAL_ADDRESS_PROP = "hazelcast.local.localAddress";
@@ -96,7 +99,7 @@ public class DefaultAddressPickerTest {
             loopback = getByName("127.0.0.1");
             publicAddress = getByName(PUBLIC_HOST);
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            LOGGER.warning("Couldn't find host", e);
         }
         assumeNotNull(loopback, publicAddress);
     }
@@ -200,7 +203,11 @@ public class DefaultAddressPickerTest {
         addressPicker.pickAddress();
 
         int port = config.getNetworkConfig().getPort();
-        assertEquals(new Address(address, port), addressPicker.getBindAddress(null));
+        if (config.getNetworkConfig().isPortAutoIncrement()) {
+            assertEquals(address, addressPicker.getBindAddress(null).getInetAddress());
+        } else {
+            assertEquals(new Address(address, port), addressPicker.getBindAddress(null));
+        }
         assertEquals(addressPicker.getBindAddress(null), addressPicker.getPublicAddress(null));
     }
 
@@ -212,10 +219,12 @@ public class DefaultAddressPickerTest {
         addressPicker = new DefaultAddressPicker(config, logger);
         addressPicker.pickAddress();
 
-        int port = addressPicker.getServerSocketChannel(null).socket().getLocalPort();
+        try (ServerSocket socket = addressPicker.getServerSocketChannel(null).socket()) {
+            int port = socket.getLocalPort();
 
-        assertEquals(new Address(loopback, port), addressPicker.getBindAddress(null));
-        assertEquals(addressPicker.getBindAddress(null), addressPicker.getPublicAddress(null));
+            assertEquals(new Address(loopback, port), addressPicker.getBindAddress(null));
+            assertEquals(addressPicker.getBindAddress(null), addressPicker.getPublicAddress(null));
+        }
     }
 
     @Test
@@ -350,6 +359,7 @@ public class DefaultAddressPickerTest {
         AddressDefinition addressDefinitionOtherInetAddress = new AddressDefinition("localhost", 5701, otherInetAddress);
 
         // InterfaceDefinition.equals()
+        //noinspection EqualsWithItself
         assertEquals(interfaceDefinition, interfaceDefinition);
         assertEquals(interfaceDefinition, interfaceDefinitionSameAttributes);
 
@@ -367,6 +377,7 @@ public class DefaultAddressPickerTest {
         assertNotEquals(interfaceDefinition.hashCode(), interfaceDefinitionOtherAddress.hashCode());
 
         // AddressDefinition.equals()
+        //noinspection EqualsWithItself
         assertEquals(addressDefinition, addressDefinition);
         assertEquals(addressDefinition, addressDefinitionSameAttributes);
 
@@ -444,7 +455,7 @@ public class DefaultAddressPickerTest {
             }
 
         } catch (SocketException e) {
-            e.printStackTrace();
+            LOGGER.warning("Could not find any non-loopback network interfaces", e);
         }
         return null;
     }
