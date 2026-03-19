@@ -10,7 +10,7 @@ env:
 jobs:
   assign-to-test-failure:
     if: contains(github.event.label.name, 'Test-Failure') &&  join(github.issue.assignees) == ''
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     steps:
       - name: Find commit from failure body or use master branch
         id: find-failure-commit-reference
