@@ -20,6 +20,7 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.RoutingMode;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.collection.IList;
+import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetService;
 import com.hazelcast.jet.Job;
@@ -67,7 +68,11 @@ public class SingleMemberClientTest extends SimpleTestInClusterSupport {
 
     @BeforeClass
     public static void setUp() {
-        initialize(2, null);
+        initializeWithConfig(null);
+    }
+
+    protected static void initializeWithConfig(Config config) {
+        initialize(2, config);
         masterInstance = instances()[0];
         nonMasterInstance = instances()[1];
         masterClient = createClientConnectingTo(masterInstance);
