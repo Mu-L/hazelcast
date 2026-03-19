@@ -17,6 +17,7 @@
 package com.hazelcast.cp;
 
 import java.time.Duration;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -34,9 +35,8 @@ public interface CPDataStructureManagementService {
      * @return a {@link CPMapPurgeResponse} containing the number of purged entries
      *         and the timestamp of the oldest remaining entry
      *
-     * @throws IllegalArgumentException if no CP group exists for the given {@code mapName}
-     * @throws IllegalStateException if the CP group exists but the CPMap with the given
-     *         {@code mapName} has not been created
+     * @throws NoSuchElementException if no CP group exists for the given {@code mapName}
+     *  *         or if the CPMap with the given {@code mapName} has not been created
      * @throws UnsupportedOperationException if purge is not enabled for the given CPMap
      *         or if the cluster version is earlier than 5.7
      * @throws NullPointerException if {@code mapName} or {@code age} is {@code null}
