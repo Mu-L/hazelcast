@@ -42,6 +42,7 @@ import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.partition.PartitioningStrategy;
 import com.hazelcast.spi.properties.ClusterProperty;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
 import java.nio.ByteOrder;
 import java.util.HashMap;
@@ -86,6 +87,7 @@ public class DefaultSerializationServiceBuilder implements SerializationServiceB
     protected boolean isCompatibility;
     protected boolean versionedSerializationEnabled;
     protected ClusterVersionAware clusterVersionAware;
+    protected HazelcastProperties properties;
 
     @Override
     public SerializationServiceBuilder setVersion(byte version) {
@@ -129,6 +131,12 @@ public class DefaultSerializationServiceBuilder implements SerializationServiceB
         JavaSerializationFilterConfig filterConfig = config.getJavaSerializationFilterConfig();
         classNameSerializationFilter = filterConfig == null ? null : new SerializationClassNameFilter(filterConfig);
         compactSerializationConfig = config.getCompactSerializationConfig();
+        return this;
+    }
+
+    @Override
+    public SerializationServiceBuilder setProperties(HazelcastProperties properties) {
+        this.properties = properties;
         return this;
     }
 
@@ -323,6 +331,7 @@ public class DefaultSerializationServiceBuilder implements SerializationServiceB
                     .withVersionedSerializationEnabled(versionedSerializationEnabled)
                     .withSchemaService(schemaService)
                     .withCompatibility(isCompatibility)
+                    .withProperties(properties)
                     .build();
                 serializationServiceV1.registerClassDefinitions(classDefinitions);
                 return serializationServiceV1;

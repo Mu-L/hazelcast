@@ -18,6 +18,8 @@ package com.hazelcast.query.impl.getters;
 
 import com.hazelcast.query.QueryException;
 import com.hazelcast.query.impl.AttributeType;
+import com.hazelcast.query.impl.getters.policy.ReflectiveAttributeLookupException;
+import com.hazelcast.query.impl.getters.policy.ReflectiveAttributeLookupPolicy;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -33,13 +35,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static com.hazelcast.internal.util.EmptyStatement.ignore;
 import static com.hazelcast.query.QueryConstants.THIS_ATTRIBUTE_NAME;
 import static com.hazelcast.query.impl.AbstractIndex.NULL;
 import static com.hazelcast.query.impl.getters.NullGetter.NULL_GETTER;
 import static com.hazelcast.query.impl.getters.NullMultiValueGetter.NULL_MULTIVALUE_GETTER;
 import static com.hazelcast.query.impl.getters.SuffixModifierUtils.getModifierSuffix;
 import static com.hazelcast.query.impl.getters.SuffixModifierUtils.removeModifierSuffix;
-import static com.hazelcast.internal.util.EmptyStatement.ignore;
 
 /**
  * Scans your classpath, indexes the metadata, allows you to query it on runtime.
@@ -98,40 +100,42 @@ public final class ReflectionHelper {
     }
 
     @SuppressWarnings({"CyclomaticComplexity", "MethodLength", "NPathComplexity"})
-    public static Getter createGetter(Object obj, String attribute, boolean failOnMissingAttribute) {
+    public static Getter createGetter(Object obj, String attribute, boolean failOnMissingAttribute,
+                                      ReflectiveAttributeLookupPolicy policy) {
         if (obj == null || obj == NULL) {
             return NULL_GETTER;
         }
 
-        final Class targetClazz = obj.getClass();
-        Class clazz = targetClazz;
         Getter getter;
-
         try {
+            Class<?> clazz = obj.getClass();
             Getter parent = null;
             List<String> possibleMethodNames = new ArrayList<>(INITIAL_CAPACITY);
+
             for (final String fullname : attribute.split("\\.")) {
                 String baseName = removeModifierSuffix(fullname);
                 String modifier = getModifierSuffix(fullname, baseName);
 
                 Getter localGetter = null;
+                ReflectiveAttributeLookupException rejectedAccessor = null;
                 possibleMethodNames.clear();
                 possibleMethodNames.add(baseName);
                 final String camelName = Character.toUpperCase(baseName.charAt(0)) + baseName.substring(1);
                 possibleMethodNames.add("get" + camelName);
                 possibleMethodNames.add("is" + camelName);
+
+                // verify class for `this` attribute as well as others
+                if (parent != null) {
+                    clazz = parent.getReturnType();
+                }
+                clazz = policy.verifyClass(clazz);
+
                 if (baseName.equals(THIS_ATTRIBUTE_NAME.value())) {
                     localGetter = GetterFactory.newThisGetter(parent, obj);
                 } else {
-
-                    if (parent != null) {
-                        clazz = parent.getReturnType();
-                    }
-
                     for (String methodName : possibleMethodNames) {
                         try {
-                            final Method method = clazz.getMethod(methodName);
-                            method.setAccessible(true);
+                            final Method method = policy.verifyMethod(clazz, clazz.getMethod(methodName));
                             localGetter = GetterFactory.newMethodGetter(obj, parent, method, modifier);
                             if (localGetter == NULL_GETTER || localGetter == NULL_MULTIVALUE_GETTER) {
                                 return localGetter;
@@ -140,11 +144,15 @@ public final class ReflectionHelper {
                             break;
                         } catch (NoSuchMethodException ignored) {
                             ignore(ignored);
+                        } catch (ReflectiveAttributeLookupException e) {
+                            if (rejectedAccessor == null) {
+                                rejectedAccessor = e;
+                            }
                         }
                     }
                     if (localGetter == null) {
                         try {
-                            final Field field = clazz.getField(baseName);
+                            final Field field = policy.verifyField(clazz, clazz.getField(baseName));
                             localGetter = GetterFactory.newFieldGetter(obj, parent, field, modifier);
                             if (localGetter == NULL_GETTER || localGetter == NULL_MULTIVALUE_GETTER) {
                                 return localGetter;
@@ -152,14 +160,17 @@ public final class ReflectionHelper {
                             clazz = field.getType();
                         } catch (NoSuchFieldException ignored) {
                             ignore(ignored);
+                        } catch (ReflectiveAttributeLookupException e) {
+                            if (rejectedAccessor == null) {
+                                rejectedAccessor = e;
+                            }
                         }
                     }
                     if (localGetter == null) {
-                        Class c = clazz;
+                        Class<?> c = clazz;
                         while (!c.isInterface() && !Object.class.equals(c)) {
                             try {
-                                final Field field = c.getDeclaredField(baseName);
-                                field.setAccessible(true);
+                                final Field field = policy.verifyField(c, c.getDeclaredField(baseName));
                                 localGetter = GetterFactory.newFieldGetter(obj, parent, field, modifier);
                                 if (localGetter == NULL_GETTER || localGetter == NULL_MULTIVALUE_GETTER) {
                                     return localGetter;
@@ -167,13 +178,21 @@ public final class ReflectionHelper {
                                 clazz = field.getType();
                                 break;
                             } catch (NoSuchFieldException ignored) {
-                                c = c.getSuperclass();
+                                ignore(ignored);
+                            } catch (ReflectiveAttributeLookupException e) {
+                                if (rejectedAccessor == null) {
+                                    rejectedAccessor = e;
+                                }
                             }
+                            c = c.getSuperclass();
                         }
                     }
                 }
                 if (localGetter == null) {
                     if (failOnMissingAttribute) {
+                        if (rejectedAccessor != null) {
+                            throw rejectedAccessor;
+                        }
                         throw new IllegalArgumentException("There is no suitable accessor for '"
                                 + baseName + "' on class '" + clazz.getName() + "'");
                     } else {
@@ -183,6 +202,8 @@ public final class ReflectionHelper {
                 parent = localGetter;
             }
             getter = parent;
+            // verify the final returned type
+            policy.verifyClass(getter.getReturnType());
             return getter;
         } catch (Throwable e) {
             throw new QueryException(e);

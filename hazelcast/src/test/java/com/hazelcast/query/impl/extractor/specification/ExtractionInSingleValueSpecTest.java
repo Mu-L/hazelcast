@@ -20,6 +20,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.QueryException;
+import com.hazelcast.query.ReflectiveAttributeTestObject;
 import com.hazelcast.query.impl.extractor.AbstractExtractionTest;
 import com.hazelcast.test.HazelcastParametrizedRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -135,6 +136,42 @@ public class ExtractionInSingleValueSpecTest extends AbstractExtractionTest {
                 Expected.of(HUNT_WITH_NULLS));
     }
 
+    @Test
+    public void restrictedLookup_staticField() {
+        execute(Input.of(new ReflectiveAttributeTestObject("a")),
+                Query.of(Predicates.equal("staticInt", 456), mv),
+                Expected.of(QueryException.class), true);
+    }
+
+    @Test
+    public void restrictedLookup_staticMethod() {
+        execute(Input.of(new ReflectiveAttributeTestObject("b")),
+                Query.of(Predicates.equal("getStaticValue", 123), mv),
+                Expected.of(QueryException.class), true);
+    }
+
+    @Test
+    public void restrictedLookup_voidMethod() {
+        execute(Input.of(new ReflectiveAttributeTestObject("c")),
+                Query.of(Predicates.equal("doVoid", null), mv),
+                Expected.of(QueryException.class), true);
+    }
+
+    @Test
+    public void restrictedLookup_blockedClass() {
+        execute(Input.of(new ReflectiveAttributeTestObject("d")),
+                Query.of(Predicates.equal("hazelcastInstance.name", null), mv),
+                Expected.of(QueryException.class), true);
+    }
+
+    @Test
+    public void restrictedLookup_attributeMatchingStaticMethodAndGetter_usesGetter() {
+        ReflectiveAttributeTestObject matching = new ReflectiveAttributeTestObject("e", false);
+        execute(Input.of(matching, new ReflectiveAttributeTestObject("f", false)),
+                Query.of(Predicates.equal("name", "e"), mv),
+                Expected.of(matching));
+    }
+
     @Parameterized.Parameters(name = "{index}: {0}, {1}, {2}")
     public static Collection<Object[]> parametrisationData() {
         return axes(
@@ -143,5 +180,4 @@ public class ExtractionInSingleValueSpecTest extends AbstractExtractionTest {
                 asList(SINGLE)
         );
     }
-
 }

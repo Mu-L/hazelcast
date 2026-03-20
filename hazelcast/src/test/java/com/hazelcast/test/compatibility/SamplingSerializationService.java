@@ -36,6 +36,7 @@ import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.test.TestEnvironment;
 
 import javax.annotation.Nonnull;
@@ -168,6 +169,11 @@ public class SamplingSerializationService implements InternalSerializationServic
     @Override
     public ClassLoader getClassLoader() {
         return delegate.getClassLoader();
+    }
+
+    @Override
+    public HazelcastProperties getHazelcastProperties() {
+        return delegate.getHazelcastProperties();
     }
 
     @Override

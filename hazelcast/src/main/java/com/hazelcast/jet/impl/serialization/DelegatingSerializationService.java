@@ -30,6 +30,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -199,6 +200,11 @@ public class DelegatingSerializationService extends AbstractSerializationService
         for (SerializerAdapter serializer : serializersByClass.values()) {
             serializer.destroy();
         }
+    }
+
+    @Override
+    public HazelcastProperties getHazelcastProperties() {
+        return delegate.getHazelcastProperties();
     }
 
     public static InternalSerializationService from(

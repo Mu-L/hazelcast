@@ -29,6 +29,7 @@ import com.hazelcast.nio.serialization.Portable;
 import com.hazelcast.query.QueryException;
 import com.hazelcast.query.extractor.ValueExtractor;
 import com.hazelcast.query.impl.DefaultArgumentParser;
+import com.hazelcast.query.impl.getters.policy.ReflectiveAttributeLookupPolicy;
 
 import java.util.Collections;
 import java.util.List;
@@ -57,6 +58,7 @@ public final class Extractors {
     private final Map<String, ValueExtractor> extractors;
     private final InternalSerializationService ss;
     private final DefaultArgumentParser argumentsParser;
+    private final ReflectiveAttributeLookupPolicy reflectiveLookupPolicy;
 
     private Extractors(
             List<AttributeConfig> attributeConfigs,
@@ -70,6 +72,7 @@ public final class Extractors {
         this.getterCache = getterCacheSupplier.get();
         this.argumentsParser = new DefaultArgumentParser();
         this.ss = ss;
+        this.reflectiveLookupPolicy = ReflectiveAttributeLookupPolicy.getPolicy(ss.getHazelcastProperties());
     }
 
     public Object extract(Object target, String attributeName, Object metadata) {
@@ -159,7 +162,8 @@ public final class Extractors {
             }
             return compactGetter;
         } else {
-            return ReflectionHelper.createGetter(targetObject, attributeName, failOnMissingReflectiveAttribute);
+            return ReflectionHelper.createGetter(targetObject, attributeName, failOnMissingReflectiveAttribute,
+                    reflectiveLookupPolicy);
         }
     }
 

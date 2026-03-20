@@ -19,8 +19,13 @@ package com.hazelcast.query.impl.getters;
 import com.hazelcast.config.AttributeConfig;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.query.QueryException;
+import com.hazelcast.query.ReflectiveAttributeTestObject;
 import com.hazelcast.query.extractor.ValueCollector;
 import com.hazelcast.query.extractor.ValueExtractor;
+import com.hazelcast.query.impl.getters.policy.ReflectiveAttributeLookupException;
+import com.hazelcast.query.impl.getters.policy.ReflectiveAttributeLookupPolicy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.test.HazelcastParametrizedRunner;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.QuickTest;
@@ -33,12 +38,14 @@ import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.Collection;
+import java.util.Properties;
 
 import static com.hazelcast.query.impl.getters.GetterCache.SIMPLE_GETTER_CACHE_SUPPLIER;
 import static com.hazelcast.test.HazelcastTestSupport.assertInstanceOf;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertNull;
 
 @RunWith(HazelcastParametrizedRunner.class)
@@ -60,12 +67,11 @@ public class ExtractorsTest {
 
     private final Bond bond = new Bond();
 
-    private InternalSerializationService ss;
+    private InternalSerializationService defaultSerService;
 
     @Before
     public void setUp() {
-        DefaultSerializationServiceBuilder builder = new DefaultSerializationServiceBuilder();
-        ss = builder.setVersion(InternalSerializationService.VERSION_1).build();
+        defaultSerService = createSerializationService(ReflectiveAttributeLookupPolicy.Policy.CONTROLLED_ACCESS.getPolicyName());
     }
 
     @Test
@@ -90,6 +96,34 @@ public class ExtractorsTest {
 
         // THEN
         assertThat((Integer) power).isEqualTo(550);
+    }
+
+    @Test
+    public void when_extractAttributeMatchingStaticMethodAndGetter_withRestrictedLookup_then_getterIsUsed() {
+        Object result = createExtractors(null).extract(new ReflectiveAttributeTestObject("a"), "name", null);
+        assertThat(result).isEqualTo("a");
+    }
+
+    @Test
+    public void when_extractAttributeMatchingStaticMethodAndGetter_withExtendedLookup_then_staticMethodIsUsed() {
+        Object result = createExtractors(null, ReflectiveAttributeLookupPolicy.Policy.FULL_ACCESS)
+                .extract(new ReflectiveAttributeTestObject("b"), "name", null);
+        assertThat(result).isEqualTo("static");
+    }
+
+    @Test
+    public void when_extractStaticMethod_withRestrictedLookup_then_throwQueryException() {
+        assertThatThrownBy(() -> createExtractors(null).extract(new ReflectiveAttributeTestObject("c"), "getStaticValue", null))
+                .isInstanceOf(QueryException.class)
+                .hasRootCauseInstanceOf(ReflectiveAttributeLookupException.class)
+                .hasMessageContaining("cannot be used for attribute extraction");
+    }
+
+    @Test
+    public void when_extractStaticMethod_withExtendedLookup_then_returnValue() {
+        Object result = createExtractors(null, ReflectiveAttributeLookupPolicy.Policy.FULL_ACCESS)
+                .extract(new ReflectiveAttributeTestObject("d"), "getStaticValue", null);
+        assertThat(result).isEqualTo(123);
     }
 
     @Test
@@ -147,17 +181,22 @@ public class ExtractorsTest {
 
     @Test
     public void when_creatingWithBuilder_then_evictableCacheIsUsed() {
-        assertInstanceOf(EvictableGetterCache.class, Extractors.newBuilder(ss).build().getterCache);
+        assertInstanceOf(EvictableGetterCache.class, Extractors.newBuilder(defaultSerService).build().getterCache);
     }
 
     @Test
     public void when_creatingWithBuilderWithSimpleGetterCache_then_simpleGetterCacheIsUsed() {
-        Extractors extractors = Extractors.newBuilder(ss).setGetterCacheSupplier(SIMPLE_GETTER_CACHE_SUPPLIER).build();
+        Extractors extractors = Extractors.newBuilder(defaultSerService)
+                                          .setGetterCacheSupplier(SIMPLE_GETTER_CACHE_SUPPLIER).build();
         assertInstanceOf(SimpleGetterCache.class, extractors.getterCache);
     }
 
     private Extractors createExtractors(AttributeConfig config) {
-        Extractors.Builder builder = Extractors.newBuilder(ss);
+        return createExtractors(config, ReflectiveAttributeLookupPolicy.Policy.CONTROLLED_ACCESS);
+    }
+
+    private Extractors createExtractors(AttributeConfig config, ReflectiveAttributeLookupPolicy.Policy lookupPolicy) {
+        Extractors.Builder builder = Extractors.newBuilder(createSerializationService(lookupPolicy.getPolicyName()));
         if (config != null) {
             builder.setAttributeConfigs(singletonList(config));
         }
@@ -165,6 +204,14 @@ public class ExtractorsTest {
             builder.setClassLoader(this.getClass().getClassLoader());
         }
         return builder.build();
+    }
+
+    private InternalSerializationService createSerializationService(String lookupPolicyName) {
+        Properties properties = new Properties();
+        properties.setProperty(ReflectiveAttributeLookupPolicy.REFLECTIVE_ATTRIBUTE_LOOKUP_POLICY.getName(), lookupPolicyName);
+        return new DefaultSerializationServiceBuilder().setVersion(InternalSerializationService.VERSION_1)
+                .setProperties(new HazelcastProperties(properties))
+                .build();
     }
 
     private static class Bond {

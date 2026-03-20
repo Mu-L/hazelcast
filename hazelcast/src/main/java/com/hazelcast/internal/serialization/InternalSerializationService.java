@@ -28,6 +28,7 @@ import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -159,6 +160,8 @@ public interface InternalSerializationService extends SerializationService, Disp
     PortableContext getPortableContext();
 
     ClassLoader getClassLoader();
+
+    HazelcastProperties getHazelcastProperties();
 
     /**
      * Returns the byte order used when serializing/deserializing objects. A notable exception is the top-level object's

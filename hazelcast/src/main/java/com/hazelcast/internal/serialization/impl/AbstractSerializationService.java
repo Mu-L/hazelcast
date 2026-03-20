@@ -48,6 +48,7 @@ import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.Portable;
 import com.hazelcast.nio.serialization.Serializer;
 import com.hazelcast.partition.PartitioningStrategy;
+import com.hazelcast.spi.properties.HazelcastProperties;
 
 import javax.annotation.Nullable;
 import java.io.Externalizable;
@@ -106,6 +107,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
     private final ILogger logger = Logger.getLogger(InternalSerializationService.class);
     private boolean isCompatibility;
     private final boolean allowOverrideDefaultSerializers;
+    private final HazelcastProperties hazelcastProperties;
 
     AbstractSerializationService(Builder<?> builder) {
         this.inputOutputFactory = builder.inputOutputFactory;
@@ -133,6 +135,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
                 builder.reflectiveCompactSerializationAllowList);
         this.compactWithSchemaSerializerAdapter = new CompactWithSchemaStreamSerializerAdapter(compactStreamSerializer);
         this.compactSerializerAdapter = new CompactStreamSerializerAdapter(compactStreamSerializer);
+        this.hazelcastProperties = builder.hazelcastProperties;
     }
 
     // used by jet
@@ -153,6 +156,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
         this.compactStreamSerializer = prototype.compactStreamSerializer;
         this.compactWithSchemaSerializerAdapter = prototype.compactWithSchemaSerializerAdapter;
         this.compactSerializerAdapter = prototype.compactSerializerAdapter;
+        this.hazelcastProperties = prototype.hazelcastProperties;
     }
 
     //region Serialization Service
@@ -438,6 +442,11 @@ public abstract class AbstractSerializationService implements InternalSerializat
     @Override
     public byte getVersion() {
         return version;
+    }
+
+    @Override
+    public HazelcastProperties getHazelcastProperties() {
+        return hazelcastProperties;
     }
 
     @Override
@@ -745,6 +754,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
         private SchemaService schemaService;
         private ClassFilter reflectiveCompactSerializationBlockList;
         private ClassFilter reflectiveCompactSerializationAllowList;
+        private HazelcastProperties hazelcastProperties;
 
         protected Builder() {
         }
@@ -840,6 +850,11 @@ public abstract class AbstractSerializationService implements InternalSerializat
 
         public final T withReflectiveCompactSerializationAllowlist(@Nullable ClassFilter allowList) {
             this.reflectiveCompactSerializationAllowList = allowList;
+            return self();
+        }
+
+        public final T withProperties(HazelcastProperties properties) {
+            this.hazelcastProperties = properties;
             return self();
         }
     }

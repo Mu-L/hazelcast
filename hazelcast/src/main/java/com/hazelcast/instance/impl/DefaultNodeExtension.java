@@ -401,6 +401,7 @@ public class DefaultNodeExtension implements NodeExtension {
                     .setVersionedSerializationEnabled(true)
                     .setClusterVersionAware(new CodebaseClusterVersionAware())
                     .isCompatibility(isCompatibility)
+                    .setProperties(node.getProperties())
                     .build();
         } catch (Exception e) {
             throw rethrow(e);

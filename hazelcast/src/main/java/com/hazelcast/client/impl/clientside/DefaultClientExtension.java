@@ -19,10 +19,10 @@ package com.hazelcast.client.impl.clientside;
 import com.hazelcast.client.HazelcastClientNotActiveException;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
+import com.hazelcast.client.config.RoutingMode;
 import com.hazelcast.client.config.SocketOptions;
 import com.hazelcast.client.impl.ClientExtension;
 import com.hazelcast.client.impl.connection.tcp.ClientPlainChannelInitializer;
-import com.hazelcast.client.config.RoutingMode;
 import com.hazelcast.client.impl.proxy.ClientMapProxy;
 import com.hazelcast.client.impl.spi.ClientClusterService;
 import com.hazelcast.client.impl.spi.ClientProxyFactory;
@@ -153,6 +153,7 @@ public class DefaultClientExtension implements ClientExtension {
                     .setHazelcastInstance(hazelcastInstance)
                     .setNotActiveExceptionSupplier(HazelcastClientNotActiveException::new)
                     .setSchemaService(client.getSchemaService())
+                    .setProperties(client.getProperties())
                     .build();
         } catch (Exception e) {
             throw rethrow(e);
