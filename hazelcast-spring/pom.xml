@@ -106,6 +106,14 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- explicitly redeclare the parent to avoid any of the Spring dependencies overwriting anything we've explicitly managed -->
+            <dependency>
+                <groupId>com.hazelcast</groupId>
+                <artifactId>hazelcast-parent</artifactId>
+                <version>${project.parent.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
