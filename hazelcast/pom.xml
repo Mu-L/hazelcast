@@ -471,7 +471,7 @@
                                 </resource>
                             </resources>
                             <outputDirectory>src/main/java</outputDirectory>
-                            <overwrite>true</overwrite>
+                            <changeDetection>always</changeDetection>
                         </configuration>
                     </execution>
                     <execution>
