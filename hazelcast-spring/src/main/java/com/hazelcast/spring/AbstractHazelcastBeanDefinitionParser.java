@@ -365,6 +365,8 @@ public abstract class AbstractHazelcastBeanDefinitionParser extends AbstractBean
                     handleCompactSerializers(child, serializerClassNames);
                 } else if ("classes".equals(name)) {
                     handleCompactSerializableClasses(child, compactSerializableClassNames);
+                } else if ("zero-config-filter".equals(name)) {
+                    handleJavaSerializationFilter(child, compactSerializationConfigBuilder, "zeroConfigFilter");
                 }
             }
             compactSerializationConfigBuilder.addConstructorArgValue(serializerClassNames);

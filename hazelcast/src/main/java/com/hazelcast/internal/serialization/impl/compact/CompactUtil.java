@@ -25,15 +25,6 @@ import java.lang.reflect.Array;
  * Utility methods to be used in compact serialization
  */
 public final class CompactUtil {
-    // To determine classes that we won't serialize with zero-config serialization
-    private static final UnsupportedPackagePrefix[] UNSUPPORTED_PACKAGE_PREFIXES = new UnsupportedPackagePrefix[]{
-            new UnsupportedPackagePrefix("java"),
-            new UnsupportedPackagePrefix("javax"),
-            new UnsupportedPackagePrefix("com.sun"),
-            new UnsupportedPackagePrefix("sun"),
-            new UnsupportedPackagePrefix("jdk")
-    };
-
     private CompactUtil() {
 
     }
@@ -172,111 +163,5 @@ public final class CompactUtil {
             shortArray[i] = characterAsShort(characterArray[i]);
         }
         return shortArray;
-    }
-
-    public static void verifyClassIsCompactSerializable(Class<?> clazz) {
-        if (canBeSerializedAsCompact(clazz)) {
-            return;
-        }
-
-        throw new HazelcastSerializationException("The '" + clazz + "' cannot "
-                + "be serialized with zero configuration Compact serialization "
-                + "because this type is not supported yet. If you want to "
-                + "serialize this class, consider writing a CompactSerializer "
-                + "for it.");
-    }
-
-    public static void verifyFieldClassIsCompactSerializable(Class<?> fieldClass, Class<?> clazz) {
-        if (canBeSerializedAsCompact(fieldClass)) {
-            return;
-        }
-
-        throw new HazelcastSerializationException("The '" + fieldClass + "' "
-                + "cannot be serialized with zero configuration Compact "
-                + "serialization because this type is not supported yet. If you "
-                + "want to serialize '" + clazz + "' which uses this class in "
-                + "its fields, consider writing a CompactSerializer for either the '"
-                + clazz + "' or the '" + fieldClass + "'.");
-    }
-
-    public static void verifyFieldClassShouldBeSerializedAsCompact(CompactStreamSerializer compactStreamSerializer,
-                                                                   Class<?> fieldClass, Class<?> clazz) {
-        if (compactStreamSerializer.canBeSerializedAsCompact(fieldClass)) {
-            return;
-        }
-
-        throw new HazelcastSerializationException("The '" + fieldClass + "' "
-                + "cannot be serialized with zero configuration Compact "
-                + "serialization because this type can be serialized with another "
-                + "serialization mechanism. If you want to serialize "
-                + "'" + clazz + "' which uses this class in its fields, consider "
-                + "overriding that serialization mechanism. You can do that by "
-                + "adding '" + fieldClass + "' to CompactSerializationConfig, or "
-                + "writing and registering an explicit CompactSerializer for it.");
-    }
-
-    private static boolean canBeSerializedAsCompact(Class<?> clazz) {
-        Package classPackage = clazz.getPackage();
-        if (classPackage == null) {
-            // If the Java version is 8, we can hit this branch if the user
-            // class does not have a package defined for it (the default
-            // package). In Java 9 and above, in that case, we won't hit this,
-            // but it will return a package whose name is an empty string.
-
-            // In Java 9 and above, the method returns null if the class is
-            // primitive, array or Void.
-
-            // We won't hit this line for primitive types, as they are already
-            // supported by the reflective serializers. For arrays, we can only
-            // hit this line for arrays of arrays which is not supported by
-            // Compact. And, Void is not a type we support in the Compact
-            // serialization.
-
-            // So, we can return false here, if the clazz is one of the types
-            // mentioned above, and return true if not, to be able to serialize
-            // user classes without a package in Java 8.
-            return !clazz.isPrimitive() && !clazz.isArray() && !Void.class.equals(clazz);
-        }
-
-        String name = classPackage.getName();
-        for (UnsupportedPackagePrefix prefix : UNSUPPORTED_PACKAGE_PREFIXES) {
-            if (prefix.matches(name)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * This class is used to check if the given package name can be supported
-     * with the zero-config Compact serialization, by trying to check if the
-     * given package name is one of the known JDK package prefixes.
-     */
-    private static final class UnsupportedPackagePrefix {
-        private final String prefix;
-        private final String prefixWithDot;
-
-        private UnsupportedPackagePrefix(String prefix) {
-            this.prefix = prefix;
-            this.prefixWithDot = prefix + ".";
-        }
-
-        /**
-         * Returns {@code true} if the given package name
-         * <ul>
-         *     <li>starts with the unsupported {@code prefix + "."}, hence
-         *     under some package with the given prefix</li>
-         *     <li>equals to the {@code prefix}, hence directly in the
-         *     given package</li>
-         * </ul>
-         * <p>
-         * The extra logic is to prevent falsely identifying packages which
-         * starts with the given unsupported package name prefix like
-         * {@code java_but_not_really_jdk}.
-         */
-        public boolean matches(String packageName) {
-            return packageName.startsWith(prefixWithDot) || packageName.equals(prefix);
-        }
     }
 }

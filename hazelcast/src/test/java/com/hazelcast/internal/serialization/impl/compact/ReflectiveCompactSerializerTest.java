@@ -18,7 +18,7 @@ package com.hazelcast.internal.serialization.impl.compact;
 
 import com.hazelcast.config.ClassFilter;
 import com.hazelcast.config.CompactSerializationConfig;
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.ExtraReflectiveCompactSerializationRestrictions;
 import com.hazelcast.internal.serialization.impl.TestAccessors;
 import org.junit.jupiter.api.Test;
 
@@ -28,11 +28,11 @@ import java.util.Objects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 
 public class ReflectiveCompactSerializerTest {
 
-    ReflectiveCompactSerializerTest() throws IOException {
+    ReflectiveCompactSerializerTest()
+            throws IOException {
     }
 
     public static class ExampleDto {
@@ -75,20 +75,20 @@ public class ReflectiveCompactSerializerTest {
 
     @Test
     void writeClassBlockedThrows() {
-        assertThatThrownBy(() -> serialize(obj, thisClassFilter(), null))
-            .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+        assertThatThrownBy(() -> serialize(obj, thisClassFilter(), null)).isInstanceOf(
+                ReflectiveCompactSerializationUnsupportedException.class);
     }
 
     @Test
     void writeOtherClassAllowedThrows() {
-        assertThatThrownBy(() -> serialize(obj, null, otherClassFilter()))
-                .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+        assertThatThrownBy(() -> serialize(obj, null, otherClassFilter())).isInstanceOf(
+                ReflectiveCompactSerializationUnsupportedException.class);
     }
 
     @Test
     void writeClassBlockedAndAllowedThrows() {
-        assertThatThrownBy(() -> serialize(obj, thisClassFilter(), thisClassFilter()))
-                .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+        assertThatThrownBy(() -> serialize(obj, thisClassFilter(), thisClassFilter())).isInstanceOf(
+                ReflectiveCompactSerializationUnsupportedException.class);
     }
 
     @Test
@@ -97,46 +97,51 @@ public class ReflectiveCompactSerializerTest {
     }
 
     @Test
-    void readWithoutBlocklist() throws IOException {
+    void readWithoutBlocklist()
+            throws IOException {
         assertThat(deserialize(serializedObj, null, null)).isEqualTo(obj);
     }
 
     @Test
-    void readOtherClassBlocked() throws IOException {
+    void readOtherClassBlocked()
+            throws IOException {
         assertThat(deserialize(serializedObj, otherClassFilter(), null)).isEqualTo(obj);
     }
 
     @Test
-    void readClassBlockedThrows() {
-        assertThatThrownBy(() -> deserialize(serializedObj, thisClassFilter(), null))
-            .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+    void readClassBlockedReturnsGenericRecord()
+            throws IOException {
+        assertThat(deserialize(serializedObj, thisClassFilter(), null)).isInstanceOf(DeserializedGenericRecord.class);
     }
 
     @Test
-    void readClassBlockedAndAllowedThrows() {
-        assertThatThrownBy(() -> deserialize(serializedObj, thisClassFilter(), thisClassFilter()))
-                .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+    void readClassBlockedAndAllowedReturnsGenericRecord()
+            throws IOException {
+        assertThat(deserialize(serializedObj, thisClassFilter(), thisClassFilter())).isInstanceOf(
+                DeserializedGenericRecord.class);
     }
 
     @Test
-    void readOtherClassBlockedAndThisClassAllowed() throws IOException {
+    void readOtherClassBlockedAndThisClassAllowed()
+            throws IOException {
         assertThat(deserialize(serializedObj, otherClassFilter(), thisClassFilter())).isEqualTo(obj);
     }
 
     @Test
-    void readOtherClassAllowed() {
-        assertThatThrownBy(() -> deserialize(serializedObj, null, otherClassFilter()))
-                .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+    void readOtherClassAllowed()
+            throws IOException {
+        assertThat(deserialize(serializedObj, null, otherClassFilter())).isInstanceOf(DeserializedGenericRecord.class);
     }
 
     @Test
-    void readEmptyAllowList() {
-        assertThatThrownBy(() -> deserialize(serializedObj, null, new ClassFilter()))
-                .isInstanceOf(ReflectiveCompactSerializationUnsupportedException.class);
+    void readEmptyAllowList()
+            throws IOException {
+        assertThat(deserialize(serializedObj, null, new ClassFilter())).isInstanceOf(DeserializedGenericRecord.class);
     }
 
     @Test
-    void readClassAllowed() throws IOException {
+    void readClassAllowed()
+            throws IOException {
         assertThat(deserialize(serializedObj, null, thisClassFilter())).isEqualTo(obj);
     }
 
@@ -148,25 +153,22 @@ public class ReflectiveCompactSerializerTest {
         return new ClassFilter().addClasses(ExampleDto.class.getName());
     }
 
-    private byte[] serialize(Object obj, ClassFilter blockList, ClassFilter allowList) throws IOException {
+    private byte[] serialize(Object obj, ClassFilter blockList, ClassFilter allowList)
+            throws IOException {
         CompactStreamSerializer compactStreamSerializer = getCompactStreamSerializer(blockList, allowList);
-        var out = TestAccessors.createByteArrayObjectDataOutput(mock(InternalSerializationService.class));
+        var out = TestAccessors.createByteArrayObjectDataOutput(null);
         compactStreamSerializer.write(out, obj);
         return out.toByteArray();
     }
 
-    private Object deserialize(byte[] data, ClassFilter blockList, ClassFilter allowList) throws IOException {
-        var in = TestAccessors.createByteArrayObjectDataInput(mock(InternalSerializationService.class), data);
+    private Object deserialize(byte[] data, ClassFilter blockList, ClassFilter allowList)
+            throws IOException {
+        var in = TestAccessors.createByteArrayObjectDataInput(null, data);
         return getCompactStreamSerializer(blockList, allowList).read(in);
     }
 
     private CompactStreamSerializer getCompactStreamSerializer(ClassFilter blockList, ClassFilter allowList) {
-        return new CompactStreamSerializer(null,
-                new CompactSerializationConfig(), null, schemaService, null, blockList, allowList) {
-            @Override
-            public boolean canBeSerializedAsCompact(Class<?> clazz) {
-                return true;
-            }
-        };
+        return new CompactStreamSerializer(cls -> CompactStreamSerializerAdapter.class, new CompactSerializationConfig(), null,
+                schemaService, null, new ExtraReflectiveCompactSerializationRestrictions(allowList, blockList, null));
     }
 }

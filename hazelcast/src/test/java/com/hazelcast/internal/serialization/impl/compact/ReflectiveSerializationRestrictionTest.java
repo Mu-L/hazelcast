@@ -15,19 +15,20 @@
  */
 package com.hazelcast.internal.serialization.impl.compact;
 
+import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.ClassFilter;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.JavaSerializationFilterConfig;
 import com.hazelcast.test.HazelcastParametrizedRunner;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.test.annotation.QuickTest;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized.UseParametersRunnerFactory;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 @RunWith(HazelcastParametrizedRunner.class)
 @UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
@@ -35,11 +36,73 @@ import java.util.stream.Stream;
 public class ReflectiveSerializationRestrictionTest
         extends AbstractReflectiveSerializationRestrictionTest {
 
-    @Parameters(name = "underTest={0}")
+    @Parameter(1)
+    public Boolean isSuccessExpected;
+
+    @Parameter(2)
+    public JavaSerializationFilterConfig config;
+
+    @Override
+    protected boolean isSuccessExpected() {
+        return isSuccessExpected;
+    }
+
+    @Override
+    protected ClientConfig getClientConfig() {
+        ClientConfig result = super.getClientConfig();
+        result.getSerializationConfig().getCompactSerializationConfig().setZeroConfigFilter(config);
+        return result;
+    }
+
+    @Override
+    public Config getConfig() {
+        Config result = super.getConfig();
+        result.getSerializationConfig().getCompactSerializationConfig().setZeroConfigFilter(config);
+        return result;
+    }
+
+    @Parameters(name = "expectSuccess={1} config={2}")
     public static List<Object[]> parameters() {
-        return Stream.of(new RestrictionTestDto(5),
-                new RestrictionTestDto[] { new RestrictionTestDto(4), new RestrictionTestDto(3)}
-        ).map(e -> new Object[]{e}).toList();
+        Class<?> clazz = RestrictionTestDto.class;
+        String name = clazz.getName();
+        String pkg = clazz.getPackageName();
+        String prefix = clazz.getPackageName() + ".";
+        RestrictionTestDto obj = new RestrictionTestDto(5);
+        return List.of(
+                new Object[]{obj, true, filter(false, null, null)},
+                new Object[]{obj, true, filter(true, null, null)},
+                new Object[]{obj, true, filter(false, null, new ClassFilter())},
+                new Object[]{obj, false, filter(true, null, new ClassFilter())},
+                new Object[]{obj, false, filter(true, new ClassFilter(), new ClassFilter())},
+                new Object[]{obj, true, filter(false, new ClassFilter(), new ClassFilter())},
+
+                // Blocklist cases
+                new Object[]{obj, false, filter(false, new ClassFilter().addClasses(name), null)},
+                new Object[]{obj, false, filter(true, new ClassFilter().addClasses(name), null)},
+
+                new Object[]{obj, false, filter(false, new ClassFilter().addPackages(pkg), null)},
+                new Object[]{obj, false, filter(true, new ClassFilter().addPackages(pkg), null)},
+
+                new Object[]{obj, false, filter(false, new ClassFilter().addPrefixes(prefix), null)},
+                new Object[]{obj, false, filter(true, new ClassFilter().addPrefixes(prefix), null)},
+
+                // Allowlist cases
+                new Object[]{obj, true, filter(false, null, new ClassFilter().addClasses(name))},
+                new Object[]{obj, true, filter(true, null, new ClassFilter().addClasses(name))},
+
+                new Object[]{obj, true, filter(false, null, new ClassFilter().addPackages(pkg))},
+                new Object[]{obj, true, filter(true, null, new ClassFilter().addPackages(pkg))},
+
+                new Object[]{obj, true, filter(false, null, new ClassFilter().addPrefixes(prefix))},
+                new Object[]{obj, true, filter(true, null, new ClassFilter().addPrefixes(prefix))}
+        );
+    }
+
+    private static JavaSerializationFilterConfig filter(boolean defaultsDisabled, ClassFilter blockList, ClassFilter allowList) {
+        return new JavaSerializationFilterConfig()
+                .setDefaultsDisabled(defaultsDisabled)
+                .setBlacklist(blockList)
+                .setWhitelist(allowList);
     }
 
     public static class RestrictionTestDto  {
@@ -57,17 +120,5 @@ public class ReflectiveSerializationRestrictionTest
         public String toString() {
             return "RestrictionTestDto{n=" + n + '}';
         }
-    }
-
-    @Override
-    protected AbstractSerializationService getSerializationServiceToTest(HazelcastInstance hz) {
-        ClassFilter blockList = new ClassFilter();
-        blockList.addClasses(RestrictionTestDto.class.getName());
-        return overrideBlockList(hz, blockList);
-    }
-
-    @Override
-    protected boolean isSuccessExpected() {
-        return false;
     }
 }

@@ -130,6 +130,8 @@ public class YamlClientDomConfigProcessor extends ClientDomConfigProcessor {
                 fillCompactSerializers(child, compactSerializationConfig);
             } else if (matches("classes", name)) {
                 fillCompactSerializableClasses(child, compactSerializationConfig);
+            } else if (matches("zero-config-filter", name)) {
+                fillJavaSerializationFilter(child, compactSerializationConfig);
             }
         }
     }

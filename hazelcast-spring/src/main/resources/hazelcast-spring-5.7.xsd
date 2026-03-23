@@ -1515,40 +1515,37 @@
         </xs:complexType>
     </xs:element>
 
-    <!--> Copy of `java-serialization-filter` with a more appropriate naming/descriptions for Namespaces <-->
-    <xs:element name="class-filter">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element name="blacklist" type="filter-list" minOccurs="0">
-                    <xs:annotation>
-                        <xs:documentation>
-                            Blacklisted class names, package names, and prefixes, which are not allowed to be loaded by User Code
-                            Namespaces.
-                        </xs:documentation>
-                    </xs:annotation>
-                </xs:element>
-                <xs:element name="whitelist" type="filter-list" minOccurs="0">
-                    <xs:annotation>
-                        <xs:documentation>
-                            Whitelisted class names, package names, and prefixes, which are allowed to be loaded by User Code
-                            Namespaces.
-                            If the list is empty (no class, package, or prefix patterns provided) then all classes are allowed.
-                        </xs:documentation>
-                    </xs:annotation>
-                </xs:element>
-            </xs:sequence>
-            <xs:attribute name="defaults-disabled" default="false">
+    <!--> Copy of `java-serialization-filter` with more general descriptions for other use cases <-->
+    <xs:complexType name="class-filter">
+        <xs:sequence>
+            <xs:element name="blacklist" type="filter-list" minOccurs="0">
                 <xs:annotation>
                     <xs:documentation>
-                        Disables including default list entries (hardcoded in Hazelcast source code).
+                        Class names, package names, and prefixes, which are rejected by the filter.
                     </xs:documentation>
                 </xs:annotation>
-                <xs:simpleType>
-                    <xs:restriction base="xs:boolean"/>
-                </xs:simpleType>
-            </xs:attribute>
-        </xs:complexType>
-    </xs:element>
+            </xs:element>
+            <xs:element name="whitelist" type="filter-list" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Class names, package names, and prefixes, which are allowed by the filter.
+
+                        If the list is empty (no class, package, or prefix patterns provided) then all classes are allowed.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="defaults-disabled" default="false">
+            <xs:annotation>
+                <xs:documentation>
+                    Disables including default list entries (hardcoded in Hazelcast source code).
+                </xs:documentation>
+            </xs:annotation>
+            <xs:simpleType>
+                <xs:restriction base="xs:boolean"/>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
 
     <xs:complexType name="filter-list">
         <xs:choice minOccurs="0" maxOccurs="unbounded">
@@ -1601,6 +1598,11 @@
             <xs:all>
                 <xs:element name="serializers" type="compact-serializers" minOccurs="0"/>
                 <xs:element name="classes" type="compact-serializable-classes" minOccurs="0"/>
+                <xs:element name="zero-config-filter" type="class-filter" minOccurs="0">
+                    <xs:annotation>
+                        <xs:documentation>Beta API</xs:documentation>
+                    </xs:annotation>
+                </xs:element>
             </xs:all>
         </xs:complexType>
     </xs:element>
@@ -6617,7 +6619,7 @@
             </xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element ref="class-filter" minOccurs="0"/>
+            <xs:element name="class-filter" type="class-filter" minOccurs="0"/>
             <xs:element name="namespace" type="namespace-type" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="enabled" type="xs:boolean" use="required"/>

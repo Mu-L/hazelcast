@@ -20,8 +20,28 @@ import com.hazelcast.nio.serialization.HazelcastSerializationException;
 
 public class ReflectiveCompactSerializationUnsupportedException
         extends HazelcastSerializationException {
+
+    public ReflectiveCompactSerializationUnsupportedException(String message) {
+        super(message);
+    }
+
     public ReflectiveCompactSerializationUnsupportedException(Class<?> clazz) {
-        super(clazz + "' cannot " + "be serialized with zero configuration Compact serialization "
-                + "because this type is not supported yet.");
+        this(format(clazz) + " cannot be serialized with zero configuration Compact serialization "
+                + "because this type can be serialized with another serialization mechanism or it is restricted. "
+                + "To override an existing serialization mechanism you can add " + format(clazz) + " to "
+                + "CompactSerializationConfig, or write and register an explicit CompactSerializer for it."
+                + "To unrestrict it you can configure the filter in CompactSerializationConfig.");
+    }
+
+    public ReflectiveCompactSerializationUnsupportedException(Class<?> clazz, Class<?> fieldClazz) {
+        this(format(clazz) + " cannot be serialized with zero configuration Compact serialization because it has a field "
+                + "of type " + format(fieldClazz) + " which can be serialized with another serialization mechanism or is "
+                + "restricted. To override an existing serialization mechanism you can add " + format(fieldClazz) + " to "
+                + "CompactSerializationConfig, or write and register an explicit CompactSerializer for it."
+                + "To unrestrict it you can configure the filter in CompactSerializationConfig.");
+    }
+
+    private static String format(Class<?> clazz) {
+        return String.format("'%s'", clazz.getName());
     }
 }

@@ -16,8 +16,11 @@
 
 package com.hazelcast.internal.config;
 
+import com.hazelcast.config.ClassFilter;
 import com.hazelcast.config.CompactSerializationConfig;
+import com.hazelcast.config.ConfigAccessor;
 import com.hazelcast.config.ConfigXmlGenerator.XmlGenerator;
+import com.hazelcast.config.JavaSerializationFilterConfig;
 import com.hazelcast.internal.util.MapUtil;
 import com.hazelcast.internal.util.TriTuple;
 import com.hazelcast.nio.serialization.compact.CompactSerializer;
@@ -39,6 +42,31 @@ public final class ConfigXmlGeneratorHelper {
     private ConfigXmlGeneratorHelper() {
     }
 
+    public static void appendClassFilter(XmlGenerator gen, String name, JavaSerializationFilterConfig filter) {
+        if (filter != null) {
+            gen.open(name, "defaults-disabled", filter.isDefaultsDisabled());
+            appendFilterList(gen, "blacklist", ConfigAccessor.getBlacklistOrNull(filter));
+            appendFilterList(gen, "whitelist", ConfigAccessor.getWhitelistOrNull(filter));
+            gen.close();
+        }
+    }
+
+    private static void appendFilterList(XmlGenerator gen, String listName, ClassFilter classFilterList) {
+        if (classFilterList == null || classFilterList.isEmpty()) {
+            return;
+        }
+        gen.open(listName);
+        for (String className : classFilterList.getClasses()) {
+            gen.node("class", className);
+        }
+        for (String packageName : classFilterList.getPackages()) {
+            gen.node("package", packageName);
+        }
+        for (String prefix : classFilterList.getPrefixes()) {
+            gen.node("prefix", prefix);
+        }
+        gen.close();
+    }
 
     /**
      * Generates the Compact serialization configuration out of the given
@@ -75,6 +103,8 @@ public final class ConfigXmlGeneratorHelper {
             // close serializers
             gen.close();
         }
+
+        appendClassFilter(gen, "zero-config-filter", config.getZeroConfigFilter());
 
         // close compact-serialization
         gen.close();

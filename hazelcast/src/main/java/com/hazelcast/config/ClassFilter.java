@@ -19,6 +19,7 @@ package com.hazelcast.config;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -43,12 +44,20 @@ public class ClassFilter {
 
     private AtomicBoolean warningLogged = new AtomicBoolean();
 
+    /**
+     * Creates an empty class filter.
+     */
     public ClassFilter() {
         classes = ConcurrentHashMap.newKeySet();
         packages = ConcurrentHashMap.newKeySet();
         prefixes = ConcurrentHashMap.newKeySet();
     }
 
+    /**
+     * Creates a new class filter by copying the configuration from the given filter.
+     *
+     * @param filter the filter to copy from
+     */
     public ClassFilter(ClassFilter filter) {
         classes = ConcurrentHashMap.newKeySet();
         classes.addAll(filter.classes);
@@ -80,12 +89,24 @@ public class ClassFilter {
         return unmodifiableSet(prefixes);
     }
 
+    /**
+     * Adds the given class names to this filter.
+     *
+     * @param names class names to add
+     * @return this filter
+     */
     public ClassFilter addClasses(String... names) {
         checkNotNull(names);
         Collections.addAll(classes, names);
         return this;
     }
 
+    /**
+     * Sets the class names for this filter.
+     *
+     * @param names class names to set
+     * @return this filter
+     */
     public ClassFilter setClasses(Collection<String> names) {
         checkNotNull(names);
         classes.clear();
@@ -93,12 +114,24 @@ public class ClassFilter {
         return this;
     }
 
+    /**
+     * Adds the given package names to this filter.
+     *
+     * @param names package names to add
+     * @return this filter
+     */
     public ClassFilter addPackages(String... names) {
         checkNotNull(names);
         Collections.addAll(packages, names);
         return this;
     }
 
+    /**
+     * Sets the package names for this filter.
+     *
+     * @param names package names to set
+     * @return this filter
+     */
     public ClassFilter setPackages(Collection<String> names) {
         checkNotNull(names);
         packages.clear();
@@ -106,12 +139,24 @@ public class ClassFilter {
         return this;
     }
 
+    /**
+     * Adds the given class name prefixes to this filter.
+     *
+     * @param names class name prefixes to add
+     * @return this filter
+     */
     public ClassFilter addPrefixes(String... names) {
         checkNotNull(names);
         Collections.addAll(prefixes, names);
         return this;
     }
 
+    /**
+     * Sets the class name prefixes for this filter.
+     *
+     * @param names class name prefixes to set
+     * @return this filter
+     */
     public ClassFilter setPrefixes(Collection<String> names) {
         checkNotNull(names);
         prefixes.clear();
@@ -119,10 +164,38 @@ public class ClassFilter {
         return this;
     }
 
+    /**
+     * Add the classes, packages and prefixes defined in the other filter
+     * to this filter.
+     *
+     * @param other The filter containing classes, packages, prefixes to add to this filter.
+     * @return This filter
+     * @since 5.7
+     */
+    @Nonnull
+    public ClassFilter add(@Nonnull ClassFilter other) {
+        checkNotNull(other);
+        classes.addAll(other.classes);
+        packages.addAll(other.packages);
+        prefixes.addAll(other.prefixes);
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if no classes, packages or prefixes are present in this filter.
+     *
+     * @return {@code true} if the filter is empty, {@code false} otherwise
+     */
     public boolean isEmpty() {
         return classes.isEmpty() && packages.isEmpty() && prefixes.isEmpty();
     }
 
+    /**
+     * Returns {@code true} if the given class name is listed in this filter.
+     *
+     * @param className class name to check
+     * @return {@code true} if the class name is listed, {@code false} otherwise
+     */
     public boolean isListed(String className) {
         if (classes.contains(className)) {
             return true;
@@ -205,5 +278,4 @@ public class ClassFilter {
     public String toString() {
         return "ClassFilter{classes=" + classes + ", packages=" + packages + ", prefixes=" + prefixes + "}";
     }
-
 }

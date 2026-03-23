@@ -3340,6 +3340,52 @@ public class XMLConfigBuilderTest extends AbstractConfigBuilderTest {
     }
 
     @Override
+    public void testCompactSerialization_zeroConfigRestrictions() {
+        String xml = HAZELCAST_START_TAG + """
+                <serialization>
+                    <compact-serialization>
+                        <zero-config-filter>
+                            <whitelist>
+                                <class>com.acme.MyClass</class>
+                                <package>com.acme.package</package>
+                                <prefix>com.acme.prefix.</prefix>
+                            </whitelist>
+                            <blacklist>
+                                <class>com.acme.MyClass2</class>
+                                <package>com.acme.package2</package>
+                                <prefix>com.acme.prefix2.</prefix>
+                            </blacklist>
+                        </zero-config-filter>
+                    </compact-serialization>
+                </serialization>
+                """ + HAZELCAST_END_TAG;
+
+        SerializationConfig config = buildConfig(xml).getSerializationConfig();
+        CompactTestUtil.verifySerializationServiceBuilds(config);
+        ClassFilter expectedWhitelist = new ClassFilter().addClasses("com.acme.MyClass").addPackages("com.acme.package")
+                                                         .addPrefixes("com.acme.prefix.");
+        ClassFilter expectedBlacklist = new ClassFilter().addClasses("com.acme.MyClass2").addPackages("com.acme.package2")
+                                                         .addPrefixes("com.acme.prefix2.");
+        CompactTestUtil.assertZeroConfigFilter(config,
+                new JavaSerializationFilterConfig().setWhitelist(expectedWhitelist).setBlacklist(expectedBlacklist));
+    }
+
+    @Override
+    public void testCompactSerialization_zeroConfigDefaultsDisabled() {
+        String xml = HAZELCAST_START_TAG + """
+                <serialization>
+                    <compact-serialization>
+                        <zero-config-filter defaults-disabled="true"/>
+                    </compact-serialization>
+                </serialization>
+                """ + HAZELCAST_END_TAG;
+
+        SerializationConfig config = buildConfig(xml).getSerializationConfig();
+        CompactTestUtil.verifySerializationServiceBuilds(config);
+        CompactTestUtil.assertZeroConfigFilter(config, new JavaSerializationFilterConfig().setDefaultsDisabled(true));
+    }
+
+    @Override
     @Test
     public void testAllowOverrideDefaultSerializers() {
         String xml = HAZELCAST_START_TAG

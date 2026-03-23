@@ -870,6 +870,8 @@ public class ConfigXmlGeneratorTest extends HazelcastTestSupport {
         CompactSerializationConfig expected = new CompactSerializationConfig();
         expected.addClass(EmployerDTO.class);
         expected.addSerializer(new EmployeeDTOSerializer());
+        expected.setZeroConfigFilter(new JavaSerializationFilterConfig().setDefaultsDisabled(true).setBlacklist(
+                new ClassFilter().addClasses("a.b.C").addPackages("a.b.c").addPrefixes("a.b.d.")));
 
         config.getSerializationConfig().setCompactSerializationConfig(expected);
 
@@ -896,6 +898,8 @@ public class ConfigXmlGeneratorTest extends HazelcastTestSupport {
                         .contains(registration.element1.getName());
             }
         }
+
+        assertThat(actual.getZeroConfigFilter()).isEqualTo(expected.getZeroConfigFilter());
     }
 
     private static class TypeClass {

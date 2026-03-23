@@ -260,7 +260,7 @@ public class DefaultCompactWriter implements CompactWriter {
     @Override
     public void writeCompact(@Nonnull String fieldName, @Nullable Object value) {
         writeVariableSizeField(fieldName, COMPACT, value,
-                (out, val) -> serializer.writeObject(out, val, includeSchemaOnBinary));
+                (out, val) -> serializer.write(out, val, includeSchemaOnBinary));
     }
 
     public void writeGenericRecord(@Nonnull String fieldName, @Nullable GenericRecord value) {

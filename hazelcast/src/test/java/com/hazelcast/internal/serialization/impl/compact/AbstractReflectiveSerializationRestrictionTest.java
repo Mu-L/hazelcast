@@ -18,11 +18,13 @@ package com.hazelcast.internal.serialization.impl.compact;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.test.TestHazelcastFactory;
-import com.hazelcast.config.ClassFilter;
 import com.hazelcast.config.CompactSerializationConfig;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.JavaSerializationFilterConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.internal.nio.BufferObjectDataOutput;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.ExtraReflectiveCompactSerializationRestrictions;
 import com.hazelcast.internal.serialization.impl.HeapData;
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
@@ -32,15 +34,15 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runners.Parameterized.Parameter;
 
+import java.io.IOException;
+import java.nio.ByteOrder;
+import java.util.concurrent.Callable;
+
 import static com.hazelcast.test.HazelcastTestSupport.smallInstanceConfigWithoutJetAndMetrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 public abstract class AbstractReflectiveSerializationRestrictionTest {
 
@@ -54,14 +56,20 @@ public abstract class AbstractReflectiveSerializationRestrictionTest {
         factory.terminateAll();
     }
 
-    protected abstract AbstractSerializationService getSerializationServiceToTest(HazelcastInstance hz);
-
     protected abstract boolean isSuccessExpected();
+
+    protected Config getConfig() {
+        return smallInstanceConfigWithoutJetAndMetrics();
+    }
+
+    protected ClientConfig getClientConfig() {
+        return new ClientConfig();
+    }
 
     @Test
     public void testMemberWrite() {
         HazelcastInstance hz = factory.newHazelcastInstance(getConfig());
-        assertReflectiveCompactSerializationOutcome(() -> getSerializationServiceToTest(hz).toBytes(underTest));
+        assertReflectiveCompactSerializationWriteOutcome(() -> getActualSerializationService(hz).toBytes(underTest));
     }
 
     @Test
@@ -71,14 +79,14 @@ public abstract class AbstractReflectiveSerializationRestrictionTest {
         HazelcastInstance hz = factory.newHazelcastInstance(getConfig());
         byte[] bytesToRead = writeRestrictedData(hz);
 
-        assertReflectiveCompactSerializationOutcome(() -> getSerializationServiceToTest(hz).toObject(new HeapData(bytesToRead)));
+        assertReflectiveCompactSerializationReadOutcome(() -> getActualSerializationService(hz).toObject(new HeapData(bytesToRead)));
     }
 
     @Test
     public void testClientWrite() {
         factory.newHazelcastInstance(getConfig());
         HazelcastInstance hz = factory.newHazelcastClient(getClientConfig());
-        assertReflectiveCompactSerializationOutcome(() -> getSerializationServiceToTest(hz).toBytes(underTest));
+        assertReflectiveCompactSerializationWriteOutcome(() -> getActualSerializationService(hz).toBytes(underTest));
     }
 
     @Test
@@ -90,45 +98,59 @@ public abstract class AbstractReflectiveSerializationRestrictionTest {
 
         byte[] bytesToRead = writeRestrictedData(hz);
 
-        assertReflectiveCompactSerializationOutcome(() -> getSerializationServiceToTest(hz).toObject(new HeapData(bytesToRead)));
+        assertReflectiveCompactSerializationReadOutcome(() -> getActualSerializationService(hz).toObject(new HeapData(bytesToRead)));
     }
 
-    protected Config getConfig() {
-        return smallInstanceConfigWithoutJetAndMetrics();
-    }
-
-    protected ClientConfig getClientConfig() {
-        return new ClientConfig();
-    }
-
-    protected final AbstractSerializationService getActualSerializationService(HazelcastInstance hz) {
+    private InternalSerializationService getActualSerializationService(HazelcastInstance hz) {
         if (hz instanceof HazelcastClientProxy proxy) {
-            return (AbstractSerializationService) proxy.getSerializationService();
+            return proxy.getSerializationService();
         } else {
-            return (AbstractSerializationService) Accessors.getSerializationService(hz);
+            return Accessors.getSerializationService(hz);
         }
     }
 
-    protected final AbstractSerializationService overrideBlockList(HazelcastInstance hz, ClassFilter override) {
-        AbstractSerializationService ss = getActualSerializationService(hz);
-        CompactSerializationConfig config = hz.getConfig().getSerializationConfig().getCompactSerializationConfig();
-        SchemaService schemaService = hz instanceof HazelcastClientProxy clientProxy ? clientProxy.client.getSchemaService()
-                : Accessors.getNode(hz).getSchemaService();
-
-        AbstractSerializationService spiedSs = spy(ss);
-        CompactStreamSerializerAdapter adjustedAdapter = new CompactStreamSerializerAdapter(
-                new CompactStreamSerializer(ss, config, ss.getManagedContext(), schemaService, null, override, null));
-
-        doReturn(adjustedAdapter).when(spiedSs).serializerForClass(any(), eq(false));
-        doReturn(adjustedAdapter).when(spiedSs).serializerFor(SerializationConstants.TYPE_COMPACT);
-        return spiedSs;
-    }
-
     private byte[] writeRestrictedData(HazelcastInstance hz) {
-        return overrideBlockList(hz, null).toBytes(underTest);
+        InternalSerializationService ss = getActualSerializationService(hz);
+        CompactSerializationConfig config = new CompactSerializationConfig(
+                hz.getConfig().getSerializationConfig().getCompactSerializationConfig());
+        config.setZeroConfigFilter(new JavaSerializationFilterConfig());
+
+        SchemaService schemaService = hz instanceof HazelcastClientProxy clientProxy ? clientProxy.client.getSchemaService() : Accessors.getNode(
+                hz).getSchemaService();
+
+        CompactStreamSerializerAdapter adjustedAdapter = new CompactStreamSerializerAdapter(
+                new CompactStreamSerializer(cls -> CompactStreamSerializerAdapter.class, config, ss.getManagedContext(),
+                        schemaService, null, ExtraReflectiveCompactSerializationRestrictions.NO_RESTRICTIONS));
+
+        try (BufferObjectDataOutput output = ss.createObjectDataOutput()) {
+            // Partition
+            output.writeInt(0, ByteOrder.BIG_ENDIAN);
+            // Serializer type
+            output.writeInt(SerializationConstants.TYPE_COMPACT, ByteOrder.BIG_ENDIAN);
+            // Data
+            adjustedAdapter.write(output, underTest);
+            return output.toByteArray();
+        } catch (IOException e) {
+            throw new AssertionError("Unexpected error creating output", e);
+        }
     }
 
-    private void assertReflectiveCompactSerializationOutcome(ThrowableAssert.ThrowingCallable block) {
+    private void assertReflectiveCompactSerializationReadOutcome(Callable<Object> block) {
+        Object result;
+        try {
+            result = block.call();
+        } catch (Exception e) {
+            throw new AssertionError("Unexpected exception thrown on read", e);
+        }
+        if (isSuccessExpected()) {
+            assertThat(result).isInstanceOf(underTest.getClass());
+        } else {
+            assertThat(result).isInstanceOf(DeserializedGenericRecord.class);
+            assertThat(((DeserializedGenericRecord) result).getSchema().getTypeName()).isEqualTo(underTest.getClass().getName());
+        }
+    }
+
+    private void assertReflectiveCompactSerializationWriteOutcome(ThrowableAssert.ThrowingCallable block) {
         if (isSuccessExpected()) {
             assertThatNoException().isThrownBy(block);
         } else {

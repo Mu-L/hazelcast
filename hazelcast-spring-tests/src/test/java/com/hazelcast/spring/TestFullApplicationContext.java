@@ -138,6 +138,7 @@ import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.crdt.pncounter.PNCounter;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
+import com.hazelcast.internal.serialization.impl.compact.CompactTestUtil;
 import com.hazelcast.jet.JetService;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
@@ -1213,6 +1214,13 @@ public class TestFullApplicationContext {
         String compactSerializerClassName = DummyCompactSerializer.class.getName();
         assertThat(serializerClassNames)
                 .contains(compactSerializerClassName);
+
+        JavaSerializationFilterConfig expectedFilter = new JavaSerializationFilterConfig()
+                .setDefaultsDisabled(true)
+                .setBlacklist(new ClassFilter().addClasses("com.hz.ClassA").addPackages("com.hz.a").addPrefixes("com.hz.a.other."))
+                .setWhitelist(new ClassFilter().addClasses("com.hz.ClassB").addPackages("com.hz.b").addPrefixes("com.hazelcast"));
+
+        CompactTestUtil.assertZeroConfigFilter(config.getSerializationConfig(), expectedFilter);
     }
 
     @Test

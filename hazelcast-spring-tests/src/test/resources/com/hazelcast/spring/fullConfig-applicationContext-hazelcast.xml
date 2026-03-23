@@ -678,6 +678,18 @@
                     <hz:classes>
                         <hz:class>com.hazelcast.spring.serialization.DummyReflectiveSerializable</hz:class>
                     </hz:classes>
+                    <hz:zero-config-filter defaults-disabled="true">
+                        <hz:blacklist>
+                            <hz:class>com.hz.ClassA</hz:class>
+                            <hz:package>com.hz.a</hz:package>
+                            <hz:prefix>com.hz.a.other.</hz:prefix>
+                        </hz:blacklist>
+                        <hz:whitelist>
+                            <hz:class>com.hz.ClassB</hz:class>
+                            <hz:package>com.hz.b</hz:package>
+                            <hz:prefix>com.hazelcast</hz:prefix>
+                        </hz:whitelist>
+                    </hz:zero-config-filter>
                 </hz:compact-serialization>
             </hz:serialization>
 

@@ -2217,6 +2217,8 @@ hazelcast:
   #       with the reflective Compact serializer. It is meant to be used
   #       to serialize classes that are serializable with other mechanisms
   #       like Java serialization with Compact serialization.
+  #     * "zero-config-filter:
+  #       Configure blacklisting and whitelisting for restricting zero-config compact serialization.
   #
   serialization:
     portable-version: 0
@@ -2254,6 +2256,19 @@ hazelcast:
         - serializer: com.hazelcast.examples.DummyTypeSerializer
       classes:
         - class: com.hazelcast.examples.DummyType
+      zero-config-filter:
+        defaults-disabled: false
+        blacklist:
+          class:
+            - com.acme.app.BeanComparator
+        whitelist:
+          class:
+            - example.Foo
+          package:
+            - com.acme.app
+            - com.acme.app.subpkg
+          prefix:
+            - com.acme.
   #
   # ===== HAZELCAST HIGH-DENSITY MEMORY STORE CONFIGURATION =====
   #

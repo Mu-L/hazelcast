@@ -559,6 +559,12 @@ public abstract class AbstractClientConfigBuilderTest extends HazelcastTestSuppo
     public abstract void testCompactSerialization_withInvalidCompactSerializableClass();
 
     @Test
+    public abstract void testCompactSerialization_zeroConfigRestrictions();
+
+    @Test
+    public abstract void testCompactSerialization_zeroConfigDefaultsDisabled();
+
+    @Test
     public abstract void testDefaultRoutingStrategyIsPicked_whenNoRoutingStrategyIsSetToMultiMemberRoutingConfig();
 
     @Test

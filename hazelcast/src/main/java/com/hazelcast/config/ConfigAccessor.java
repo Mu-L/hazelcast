@@ -77,4 +77,12 @@ public final class ConfigAccessor {
                                                  UserCodeNamespaceConfig namespaceConfig) {
         namespacesConfig.addNamespaceConfigLocally(namespaceConfig);
     }
+
+    public static ClassFilter getWhitelistOrNull(JavaSerializationFilterConfig filter) {
+        return filter.getWhitelistOrNull();
+    }
+
+    public static ClassFilter getBlacklistOrNull(JavaSerializationFilterConfig filter) {
+        return filter.getBlacklistOrNull();
+    }
 }

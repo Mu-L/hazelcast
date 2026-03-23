@@ -431,6 +431,12 @@ public abstract class AbstractConfigBuilderTest extends HazelcastTestSupport {
     public abstract void testCompactSerialization_withInvalidCompactSerializableClass();
 
     @Test
+    public abstract void testCompactSerialization_zeroConfigRestrictions();
+
+    @Test
+    public abstract void testCompactSerialization_zeroConfigDefaultsDisabled();
+
+    @Test
     public abstract void testAllowOverrideDefaultSerializers();
 
     @Test

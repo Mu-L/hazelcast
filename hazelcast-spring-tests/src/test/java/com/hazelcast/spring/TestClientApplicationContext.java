@@ -39,6 +39,7 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.collection.IQueue;
 import com.hazelcast.collection.ISet;
 import com.hazelcast.config.AwsConfig;
+import com.hazelcast.config.ClassFilter;
 import com.hazelcast.config.CompactSerializationConfig;
 import com.hazelcast.config.CompactSerializationConfigAccessor;
 import com.hazelcast.config.EntryListenerConfig;
@@ -47,6 +48,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.IndexConfig;
 import com.hazelcast.config.IndexType;
 import com.hazelcast.config.InstanceTrackingConfig;
+import com.hazelcast.config.JavaSerializationFilterConfig;
 import com.hazelcast.config.LoginModuleConfig;
 import com.hazelcast.config.MaxSizePolicy;
 import com.hazelcast.config.NativeMemoryConfig;
@@ -61,6 +63,7 @@ import com.hazelcast.config.security.JaasAuthenticationConfig;
 import com.hazelcast.config.security.RealmConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.serialization.impl.compact.CompactTestUtil;
 import com.hazelcast.map.IMap;
 import com.hazelcast.memory.MemoryUnit;
 import com.hazelcast.multimap.MultiMap;
@@ -404,9 +407,8 @@ class TestClientApplicationContext {
 
     @Test
     void tesCompactSerializationConfig() {
-        CompactSerializationConfig compactSerializationConfig = clientWithCompactSerialization.getClientConfig()
-                .getSerializationConfig()
-                .getCompactSerializationConfig();
+        SerializationConfig serializationConfig = clientWithCompactSerialization.getClientConfig().getSerializationConfig();
+        CompactSerializationConfig compactSerializationConfig = serializationConfig.getCompactSerializationConfig();
 
         List<String> serializerClassNames
                 = CompactSerializationConfigAccessor.getSerializerClassNames(compactSerializationConfig);
@@ -423,6 +425,13 @@ class TestClientApplicationContext {
         String compactSerializerClassName = DummyCompactSerializer.class.getName();
         assertThat(serializerClassNames)
                 .contains(compactSerializerClassName);
+
+        JavaSerializationFilterConfig expectedFilter = new JavaSerializationFilterConfig()
+                .setDefaultsDisabled(true)
+                .setBlacklist(new ClassFilter().addClasses("com.hz.ClassA").addPackages("com.hz.a").addPrefixes("com.hz.a.other."))
+                .setWhitelist(new ClassFilter().addClasses("com.hz.ClassB").addPackages("com.hz.b").addPrefixes("com.hazelcast"));
+
+        CompactTestUtil.assertZeroConfigFilter(serializationConfig, expectedFilter);
     }
 
     @Test

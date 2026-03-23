@@ -25,15 +25,30 @@ public class JavaSerializationFilterConfig {
     private volatile ClassFilter whitelist;
     private volatile boolean defaultsDisabled;
 
+    /**
+     * Creates an empty Java serialization filter configuration.
+     */
     public JavaSerializationFilterConfig() {
     }
 
+    /**
+     * Creates a new Java serialization filter configuration by copying the given configuration.
+     *
+     * @param javaSerializationFilterConfig the configuration to copy from
+     */
     public JavaSerializationFilterConfig(JavaSerializationFilterConfig javaSerializationFilterConfig) {
-        blacklist = new ClassFilter(javaSerializationFilterConfig.blacklist);
-        whitelist = new ClassFilter(javaSerializationFilterConfig.whitelist);
+        ClassFilter inputBlacklist = javaSerializationFilterConfig.blacklist;
+        blacklist = inputBlacklist == null ? null : new ClassFilter(inputBlacklist);
+        ClassFilter inputWhitelist = javaSerializationFilterConfig.whitelist;
+        whitelist = inputWhitelist == null ? null : new ClassFilter(inputWhitelist);
         defaultsDisabled = javaSerializationFilterConfig.defaultsDisabled;
     }
 
+    /**
+     * Returns the blacklist filter. If not set, it sets and returns an empty filter.
+     *
+     * @return the blacklist filter
+     */
     public ClassFilter getBlacklist() {
         if (blacklist == null) {
             blacklist = new ClassFilter();
@@ -41,11 +56,26 @@ public class JavaSerializationFilterConfig {
         return blacklist;
     }
 
+    ClassFilter getBlacklistOrNull() {
+        return blacklist;
+    }
+
+    /**
+     * Sets the blacklist filter.
+     *
+     * @param blackList the blacklist filter to set
+     * @return this configuration
+     */
     public JavaSerializationFilterConfig setBlacklist(ClassFilter blackList) {
         this.blacklist = blackList;
         return this;
     }
 
+    /**
+     * Returns the whitelist filter. If not set, it sets and returns an empty filter.
+     *
+     * @return the whitelist filter
+     */
     public ClassFilter getWhitelist() {
         if (whitelist == null) {
             whitelist = new ClassFilter();
@@ -53,15 +83,36 @@ public class JavaSerializationFilterConfig {
         return whitelist;
     }
 
+    ClassFilter getWhitelistOrNull() {
+        return whitelist;
+    }
+
+    /**
+     * Sets the whitelist filter.
+     *
+     * @param whiteList the whitelist filter to set
+     * @return this configuration
+     */
     public JavaSerializationFilterConfig setWhitelist(ClassFilter whiteList) {
         this.whitelist = whiteList;
         return this;
     }
 
+    /**
+     * Returns whether the default serialization filters are disabled.
+     *
+     * @return {@code true} if defaults are disabled, {@code false} otherwise
+     */
     public boolean isDefaultsDisabled() {
         return defaultsDisabled;
     }
 
+    /**
+     * Sets whether the default serialization filters are disabled.
+     *
+     * @param defaultsDisabled {@code true} to disable defaults, {@code false} otherwise
+     * @return this configuration
+     */
     public JavaSerializationFilterConfig setDefaultsDisabled(boolean defaultsDisabled) {
         this.defaultsDisabled = defaultsDisabled;
         return this;

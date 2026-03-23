@@ -21,14 +21,15 @@ import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.internal.serialization.impl.compact.CompactGenericRecord;
 import com.hazelcast.internal.serialization.impl.compact.CompactTestUtil;
 import com.hazelcast.internal.serialization.impl.compact.SchemaService;
+import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.compact.CompactReader;
 import com.hazelcast.nio.serialization.compact.CompactSerializer;
 import com.hazelcast.nio.serialization.compact.CompactWriter;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecordBuilder;
-import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -195,7 +196,7 @@ public class RecordSerializationTest extends HazelcastTestSupport {
             service.toData(new UnixDomainPrincipal(() -> null, () -> null));
         }).isInstanceOf(HazelcastSerializationException.class)
                 .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-                .hasStackTraceContaining("If you want to serialize this class");
+                .hasStackTraceContaining("To override an existing serialization mechanism you can add");
     }
 
     @Test
@@ -204,7 +205,7 @@ public class RecordSerializationTest extends HazelcastTestSupport {
             service.toData(new RecordWithUnsupportedField(new LinkedList<>()));
         }).isInstanceOf(HazelcastSerializationException.class)
                 .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-                .hasStackTraceContaining("which uses this class in its fields");
+                .hasStackTraceContaining("because it has a field of type 'java.util.LinkedList'");
     }
 
     @Test
@@ -213,7 +214,7 @@ public class RecordSerializationTest extends HazelcastTestSupport {
             service.toData(new RecordWithUnsupportedArrayField(new LinkedList[0]));
         }).isInstanceOf(HazelcastSerializationException.class)
                 .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-                .hasStackTraceContaining("which uses this class in its fields");
+                .hasStackTraceContaining("because it has a field of type 'java.util.LinkedList'");
     }
 
     @Test
@@ -236,6 +237,17 @@ public class RecordSerializationTest extends HazelcastTestSupport {
         assertEquals(object, deserialized);
     }
 
+    @Test
+    public void testSerializingRecordReflectively_withNestedGenericRecord() {
+        SerializationService serializationService = CompactTestUtil.createSerializationService();
+        RecordWithNestedGenericRecord object = new RecordWithNestedGenericRecord(1,
+                GenericRecordBuilder.compact("my.type").setInt32("m", 42).build());
+
+        Data data = serializationService.toData(object);
+        RecordWithNestedGenericRecord objectCopy = serializationService.toObject(data);
+        assertThat(objectCopy.nested()).isInstanceOf(CompactGenericRecord.class);
+        assertThat(objectCopy).isEqualTo(object);
+    }
 
     private record RecordWithUnsupportedField(LinkedList<String> list) {
     }
@@ -244,6 +256,9 @@ public class RecordSerializationTest extends HazelcastTestSupport {
     }
 
     private record RecordWithInstant(Instant instant) {
+    }
+
+    private record RecordWithNestedGenericRecord(int n, GenericRecord nested) {
     }
 
     private record RecordWithArrayOfInstant(Instant[] lists) {

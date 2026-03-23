@@ -16,6 +16,7 @@
 
 package com.hazelcast.internal.serialization.impl;
 
+import com.hazelcast.config.ClassFilter;
 import com.hazelcast.config.CompactSerializationConfig;
 import com.hazelcast.config.GlobalSerializerConfig;
 import com.hazelcast.config.JavaSerializationFilterConfig;
@@ -26,6 +27,7 @@ import com.hazelcast.core.ManagedContext;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry;
 import com.hazelcast.internal.nio.ClassLoaderUtil;
+import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.internal.serialization.InputOutputFactory;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationClassNameFilter;
@@ -331,6 +333,9 @@ public class DefaultSerializationServiceBuilder implements SerializationServiceB
                     .withVersionedSerializationEnabled(versionedSerializationEnabled)
                     .withSchemaService(schemaService)
                     .withCompatibility(isCompatibility)
+                    .withReflectiveCompactSerializationRestrictions(new ExtraReflectiveCompactSerializationRestrictions(
+                           null, null, createReflectiveCompactSerializerDefaultBlockList()
+                    ))
                     .withProperties(properties)
                     .build();
                 serializationServiceV1.registerClassDefinitions(classDefinitions);
@@ -340,6 +345,19 @@ public class DefaultSerializationServiceBuilder implements SerializationServiceB
             default:
                 throw new IllegalArgumentException("Serialization version is not supported!");
         }
+    }
+
+    protected ClassFilter createReflectiveCompactSerializerDefaultBlockList() {
+        ClassFilter blockList = new ClassFilter();
+        blockList.addPrefixes("com.hazelcast.shaded");
+        blockList.addPackages("org.jctools.queues");
+        blockList.addClasses(
+                HeapData.class.getName(),
+                Packet.class.getName(),
+                UnsafeObjectDataInput.class.getName(),
+                "org.agrona.concurrent.status.AtomicCounter"
+        );
+        return blockList;
     }
 
     private void registerSerializerHooks(InternalSerializationService ss) {

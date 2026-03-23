@@ -237,6 +237,17 @@
             <classes>
                 <class>com.hazelcast.examples.DummyType</class>
             </classes>
+            <zero-config-filter defaults-disabled="false">
+                <blacklist>
+                    <class>com.acme.app.BeanComparator</class>
+                </blacklist>
+                <whitelist>
+                    <class>example.Foo</class>
+                    <package>com.acme.app</package>
+                    <package>com.acme.app.subpkg</package>
+                    <prefix>com.acme.</prefix>
+                </whitelist>
+            </zero-config-filter>
         </compact-serialization>
     </serialization>
 

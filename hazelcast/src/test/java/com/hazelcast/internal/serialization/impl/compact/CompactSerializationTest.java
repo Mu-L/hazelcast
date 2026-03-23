@@ -269,7 +269,7 @@ public class CompactSerializationTest {
                 service.toData(OptionalDouble.of(1))
         ).isInstanceOf(HazelcastSerializationException.class)
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("If you want to serialize this class");
+         .hasStackTraceContaining("To override an existing serialization mechanism you can add");
     }
 
     @Test
@@ -279,7 +279,7 @@ public class CompactSerializationTest {
                 service.toData(new ClassWithUnsupportedField())
         ).isInstanceOf(HazelcastSerializationException.class)
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("which uses this class in its fields");
+         .hasStackTraceContaining("because it has a field of type 'java.util.LinkedList'");
     }
 
     @Test
@@ -309,7 +309,7 @@ public class CompactSerializationTest {
                 service.toData(new ClassWithUnsupportedArrayField())
         ).isInstanceOf(HazelcastSerializationException.class)
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("which uses this class in its fields");
+         .hasStackTraceContaining("because it has a field of type 'java.util.LinkedList'");
     }
 
     @Test
@@ -319,7 +319,7 @@ public class CompactSerializationTest {
                 service.toData(new ClassWithArrayOfArrayField())
         ).isInstanceOf(HazelcastSerializationException.class)
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("which uses this class in its fields");
+         .hasStackTraceContaining("because it has a field of type '[I'");
     }
 
     @Test
@@ -329,7 +329,7 @@ public class CompactSerializationTest {
                 service.toData(new ClassWithVoidField())
         ).isInstanceOf(HazelcastSerializationException.class)
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("which uses this class in its fields");
+         .hasStackTraceContaining("because it has a field of type 'java.lang.Void'");
     }
 
     @Test
@@ -373,22 +373,19 @@ public class CompactSerializationTest {
         assertThatThrownBy(() ->
                 service.toData(new ClassWithUnsupportedArrayListField())
         ).isInstanceOf(HazelcastSerializationException.class)
-         .hasStackTraceContaining("UUID")
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("which uses this class in its fields");
+         .hasStackTraceContaining("because it has a field of type 'java.util.UUID'");
 
         assertThatThrownBy(() ->
                 service.toData(new ClassWithUnsupportedHashSetField())
         ).isInstanceOf(HazelcastSerializationException.class)
-         .hasStackTraceContaining("UUID")
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("which uses this class in its fields");
+         .hasStackTraceContaining("because it has a field of type 'java.util.UUID'");
 
         assertThatThrownBy(() -> service.toData(new ClassWithUnsupportedHashMapField()))
                 .isInstanceOf(HazelcastSerializationException.class)
-                .hasStackTraceContaining("UUID")
                 .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-                .hasStackTraceContaining("which uses this class in its fields");
+                .hasStackTraceContaining("because it has a field of type 'java.util.UUID'");
     }
 
     @Test
@@ -436,7 +433,7 @@ public class CompactSerializationTest {
                 service.toData(new UsesSerializableClassAsField(new SerializableEmployeeDTO("John Doe", 42)))
         ).isInstanceOf(HazelcastSerializationException.class)
          .hasStackTraceContaining("cannot be serialized with zero configuration Compact serialization")
-         .hasStackTraceContaining("can be serialized with another serialization mechanism.");
+         .hasStackTraceContaining("can be serialized with another serialization mechanism");
     }
 
     @Test
