@@ -39,6 +39,12 @@
         <checkstyle.headerLocation>${project.parent.basedir}/checkstyle/ClassHeaderHazelcastCommunity.txt</checkstyle.headerLocation>
 
         <immutables.version>2.12.1</immutables.version>
+        <!--
+        There is no Javadoc to publish, so we (ab)use `maven-jar-plugin` to generate a dummy artifact with `javadoc` classifier
+        Hence we do not need to execute `maven-javadoc-plugin`, even if executed in other reactor modules
+        https://maven.apache.org/plugins/maven-javadoc-plugin/javadoc-mojo.html#skip
+        -->
+        <maven.javadoc.skip>true</maven.javadoc.skip>
     </properties>
 
     <build>
