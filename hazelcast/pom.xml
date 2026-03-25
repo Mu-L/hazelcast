@@ -886,7 +886,7 @@
         <dependency>
             <groupId>com.rabbitmq.jms</groupId>
             <artifactId>rabbitmq-jms</artifactId>
-            <version>3.5.0</version>
+            <version>3.6.0</version>
             <scope>test</scope>
         </dependency>
 
