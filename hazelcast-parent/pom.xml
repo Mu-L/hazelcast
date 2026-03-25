@@ -412,6 +412,7 @@
                 <artifactId>snakeyaml-engine</artifactId>
                 <version>3.0.1</version>
             </dependency>
+            <!-- Addresses dependency convergence -->
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
