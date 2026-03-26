@@ -21,12 +21,17 @@ import com.hazelcast.sql.impl.extract.QueryExtractor;
 import com.hazelcast.sql.impl.extract.QueryTarget;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -49,33 +54,51 @@ import static com.hazelcast.sql.impl.type.QueryDataType.TINYINT;
 import static com.hazelcast.sql.impl.type.QueryDataType.VARCHAR;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @RunWith(JUnitParamsRunner.class)
 public class JsonQueryTargetTest {
 
+    private static final String FILENAME = "object.json";
+    private static final String JSON_OBJECT = "{"
+            + "\"string\": \"string\""
+            + ", \"boolean\": true"
+            + ", \"byte\": 127"
+            + ", \"short\": 32767"
+            + ", \"int\": 2147483647"
+            + ", \"long\": 9223372036854775807"
+            + ", \"float\": 1234567890.1"
+            + ", \"double\": 123451234567890.1"
+            + ", \"decimal\": \"9223372036854775.123\""
+            + ", \"time\": \"12:23:34\""
+            + ", \"date\": \"2020-09-09\""
+            + ", \"timestamp\": \"2020-09-09T12:23:34.1\""
+            + ", \"timestampTz\": \"2020-09-09T12:23:34.2Z\""
+            + ", \"null\": null"
+            + ", \"object\": {}"
+            + ", \"co\": {\"nested\":{}}"
+            + "}";
+
+    @Rule
+    public TemporaryFolder dir = new TemporaryFolder();
+
+    @Before
+    public void writeFile()
+            throws IOException {
+        Files.writeString(dir.newFile(FILENAME).toPath(), JSON_OBJECT);
+    }
+
+    private File resolveObjectFile() {
+        return new File(dir.getRoot(), FILENAME);
+    }
+
     @SuppressWarnings("unused")
     private Object[] values() throws IOException {
-        String json = "{"
-                + "\"string\": \"string\""
-                + ", \"boolean\": true"
-                + ", \"byte\": 127"
-                + ", \"short\": 32767"
-                + ", \"int\": 2147483647"
-                + ", \"long\": 9223372036854775807"
-                + ", \"float\": 1234567890.1"
-                + ", \"double\": 123451234567890.1"
-                + ", \"decimal\": \"9223372036854775.123\""
-                + ", \"time\": \"12:23:34\""
-                + ", \"date\": \"2020-09-09\""
-                + ", \"timestamp\": \"2020-09-09T12:23:34.1\""
-                + ", \"timestampTz\": \"2020-09-09T12:23:34.2Z\""
-                + ", \"null\": null"
-                + ", \"object\": {}"
-                + ", \"co\": {\"nested\":{}}"
-                + "}";
+        String json = JSON_OBJECT;
         return new Object[]{
                 new Object[]{json},
                 new Object[]{json.getBytes(StandardCharsets.UTF_8)},
+                new Object[]{json.toCharArray()},
                 new Object[]{JsonUtil.mapFrom(json)}
         };
     }
@@ -121,5 +144,37 @@ public class JsonQueryTargetTest {
         assertThat(timestampTzExtractor.get()).isEqualTo(OffsetDateTime.of(2020, 9, 9, 12, 23, 34, 200_000_000, UTC));
         assertThat(nullExtractor.get()).isNull();
         assertThat(objectExtractor.get()).isNotNull();
+    }
+
+    @Test
+    public void testUrlRejected() {
+        QueryTarget target = new JsonQueryTarget();
+        assertThatThrownBy(() -> target.setTarget(resolveObjectFile().toURI().toURL(), null)).isInstanceOf(
+                IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testFileRejected() {
+        QueryTarget target = new JsonQueryTarget();
+        assertThatThrownBy(() -> target.setTarget(resolveObjectFile(), null)).
+                isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    public void testReaderRejected()
+            throws IOException {
+        try (var reader = Files.newBufferedReader(resolveObjectFile().toPath())) {
+            QueryTarget target = new JsonQueryTarget();
+            assertThatThrownBy(() -> target.setTarget(reader, null)).isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
+    public void testInputStreamRejected()
+            throws IOException {
+        try (var inputStream = Files.newInputStream(resolveObjectFile().toPath())) {
+            QueryTarget target = new JsonQueryTarget();
+            assertThatThrownBy(() -> target.setTarget(inputStream, null)).isInstanceOf(IllegalArgumentException.class);
+        }
     }
 }
