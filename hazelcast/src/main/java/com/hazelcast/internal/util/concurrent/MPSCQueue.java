@@ -286,11 +286,6 @@ public final class MPSCQueue<E> extends AbstractQueue<E> implements BlockingQueu
     }
 
     @Override
-    public boolean isEmpty() {
-        return size() == 0;
-    }
-
-    @Override
     public void put(E e) {
         offer(e);
     }

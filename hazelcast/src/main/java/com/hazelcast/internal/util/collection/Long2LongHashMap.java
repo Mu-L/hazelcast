@@ -20,10 +20,10 @@ package com.hazelcast.internal.util.collection;
 import com.hazelcast.internal.util.QuickMath;
 import com.hazelcast.internal.util.function.LongLongConsumer;
 
+import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -36,7 +36,7 @@ import static com.hazelcast.internal.util.collection.Hashing.evenLongHash;
  * A Probing hashmap specialised for long key and value pairs.
  */
 @SuppressWarnings("checkstyle:methodcount")
-public class Long2LongHashMap implements Map<Long, Long> {
+public class Long2LongHashMap extends AbstractMap<Long, Long> {
     /** The default load factor for constructors not explicitly supplying it */
     public static final double DEFAULT_LOAD_FACTOR = 0.6;
     /** The default initial capacity for constructors not explicitly supplying it */
@@ -87,11 +87,6 @@ public class Long2LongHashMap implements Map<Long, Long> {
     @Override
     public int size() {
         return size;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return size() == 0;
     }
 
     public long get(final long key) {
@@ -249,13 +244,6 @@ public class Long2LongHashMap implements Map<Long, Long> {
     @Override
     public boolean containsValue(final Object value) {
         return containsValue((long) (Long) value);
-    }
-
-    @Override
-    public void putAll(final Map<? extends Long, ? extends Long> map) {
-        for (final Entry<? extends Long, ? extends Long> entry : map.entrySet()) {
-            put(entry.getKey(), entry.getValue());
-        }
     }
 
     @Override

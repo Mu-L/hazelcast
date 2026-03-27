@@ -18,9 +18,9 @@
 package com.hazelcast.internal.util.collection;
 
 import java.lang.reflect.Array;
+import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Set;
 import java.util.function.Predicate;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
@@ -32,7 +32,7 @@ import static com.hazelcast.internal.util.collection.Hashing.intHash;
  * Simple fixed-size int hashset.
  */
 @SuppressWarnings("checkstyle:methodcount")
-public final class IntHashSet implements Set<Integer> {
+public final class IntHashSet extends AbstractSet<Integer> {
     /** Maximum supported capacity */
     @SuppressWarnings("checkstyle:magicnumber")
     public static final int MAX_CAPACITY = 1 << 29;
@@ -162,11 +162,6 @@ public final class IntHashSet implements Set<Integer> {
     @Override
     public int size() {
         return size;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return size() == 0;
     }
 
     @Override

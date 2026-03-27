@@ -20,6 +20,7 @@ package com.hazelcast.internal.util.collection;
 import com.hazelcast.internal.util.QuickMath;
 
 import java.util.AbstractCollection;
+import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,7 +41,7 @@ import static com.hazelcast.internal.util.collection.Hashing.longHash;
  *
  * @param <V> values stored in the {@link java.util.Map}
  */
-public class Long2ObjectHashMap<V> implements Map<Long, V> {
+public class Long2ObjectHashMap<V> extends AbstractMap<Long, V> {
 
     /** The default load factor for constructors not explicitly supplying it */
     public static final double DEFAULT_LOAD_FACTOR = 0.6;
@@ -116,11 +117,6 @@ public class Long2ObjectHashMap<V> implements Map<Long, V> {
     @Override
     public int size() {
         return size;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return 0 == size;
     }
 
     @Override
@@ -276,13 +272,6 @@ public class Long2ObjectHashMap<V> implements Map<Long, V> {
     public void compact() {
         final int idealCapacity = (int) Math.round(size() * (1.0d / loadFactor));
         rehash(QuickMath.nextPowerOfTwo(idealCapacity));
-    }
-
-    @Override
-    public void putAll(final Map<? extends Long, ? extends V> map) {
-        for (final Entry<? extends Long, ? extends V> entry : map.entrySet()) {
-            put(entry.getKey(), entry.getValue());
-        }
     }
 
     @Override

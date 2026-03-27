@@ -27,7 +27,7 @@ import java.util.*;
  * @param <K> type of keys stored in the {@link Map}
  */
 public class Object2LongHashMap<K>
-    implements Map<K, Long>
+    extends AbstractMap<K, Long>
 {
     private static final float DEFAULT_LOAD_FACTOR = 0.6F;
     private static final int MIN_CAPACITY = 8;
@@ -160,15 +160,6 @@ public class Object2LongHashMap<K>
     public int size()
     {
         return size;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isEmpty()
-    {
-        return 0 == size;
     }
 
     /**
@@ -381,17 +372,6 @@ public class Object2LongHashMap<K>
     {
         final int idealCapacity = (int)Math.round(size() * (1.0d / loadFactor));
         rehash(QuickMath.nextPowerOfTwo(Math.max(MIN_CAPACITY, idealCapacity)));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public void putAll(final Map<? extends K, ? extends Long> map)
-    {
-        for (final Entry<? extends K, ? extends Long> entry : map.entrySet())
-        {
-            put(entry.getKey(), entry.getValue());
-        }
     }
 
     /**

@@ -18,9 +18,9 @@
 package com.hazelcast.internal.util.collection;
 
 import java.lang.reflect.Array;
+import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Set;
 import java.util.function.Predicate;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
@@ -32,7 +32,7 @@ import static com.hazelcast.internal.util.collection.Hashing.longHash;
  * Simple fixed-size long hashset.
  */
 @SuppressWarnings("checkstyle:methodcount")
-public final class LongHashSet implements Set<Long> {
+public final class LongHashSet extends AbstractSet<Long> {
     /** Maximum supported capacity */
     @SuppressWarnings("checkstyle:magicnumber")
     public static final int MAX_CAPACITY = 1 << 29;
@@ -181,14 +181,6 @@ public final class LongHashSet implements Set<Long> {
     @Override
     public int size() {
         return size;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isEmpty() {
-        return size() == 0;
     }
 
     /**
