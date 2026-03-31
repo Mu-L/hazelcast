@@ -126,7 +126,7 @@ public final class KinesisSources {
      * tripped.
      * <p>
      * The source provides a metric called
-     * {@value MILLIS_BEHIND_LATEST_METRIC}, which specifies, for each
+     * {@value #MILLIS_BEHIND_LATEST_METRIC}, which specifies, for each
      * shard, the source is actively reading data from if there is any
      * delay in reading the data.
      *
