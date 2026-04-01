@@ -74,6 +74,7 @@
     </build>
 
     <dependencies>
+        <!-- When upgrading, consider if manually specified (to address dependency convergence) version of transitive dependency `org.codehaus.woodstox` should be upgraded -->
         <dependency>
             <groupId>com.google.cloud.bigdataoss</groupId>
             <artifactId>gcs-connector</artifactId>

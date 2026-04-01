@@ -298,6 +298,7 @@
                 <version>${kafka.version}</version>
                 <classifier>test</classifier>
             </dependency>
+            <!-- When upgrading, consider if manually specified (to address dependency convergence) version of transitive dependency `org.codehaus.woodstox:stax2-api` should be upgraded -->
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
@@ -505,6 +506,11 @@
                 <artifactId>woodstox-core</artifactId>
                 <version>7.1.1</version>
             </dependency>
+            <!-- 
+                Addresses convergence between:
+                - `com.fasterxml.woodstox:woodstox-core` (transitively via `org.apache.hadoop:hadoop-client`)
+                - com.google.cloud:google-cloud-storage (transitively via `com.google.cloud.bigdataoss:gcs-connector`)
+            -->
             <dependency>
                 <groupId>org.codehaus.woodstox</groupId>
                 <artifactId>stax2-api</artifactId>
